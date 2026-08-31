@@ -1,0 +1,24 @@
+# Dependencias
+node_modules/
+
+# Compilación de Next. Hay una carpeta por proceso —escritorio, móvil, volumen,
+# moderna— y otra para `next build`; ninguna va al repositorio.
+.next/
+.next-*/
+out/
+
+# Variables locales: nunca al repositorio.
+.env.local
+.env*.local
+
+# Sistema y editor
+.DS_Store
+*.log
+npm-debug.log*
+
+# Caché de los guiones de datos
+scripts/.cache-osm/
+tsconfig.tsbuildinfo
+
+# Copia de seguridad de la cartera anterior
+lib/portfolio.json.bak

@@ -1,0 +1,303 @@
+/* --------------------------------------------------------------------------
+   Estilos intercambiables.
+
+   Cuatro paletas completas, seleccionables por el usuario con
+   `data-estilo` en el `<html>`. No son cuatro temas de color pegados encima:
+   cada una redefine el juego entero —papel, tinta, filetes, vidrios, acento,
+   semántica, etapas, aurora, matriz y el fondo del panel oscuro— porque en
+   este sistema el color no es una capa, es de dónde sale todo.
+
+   La razón de que esto quepa en un fichero es la misma que la de los dos
+   temas: ni Tailwind ni las pantallas llevan un solo valor de color. Todo
+   apunta a estas variables, así que cambiar de estilo es cambiar un atributo.
+
+   Sobre la especificidad, que es lo único delicado. Los tokens oscuros viven
+   en `.oscuro` (0,1,0) y estos bloques usan `:root[data-estilo="x"]` (0,2,0),
+   que gana. Si el bloque claro no se acotara con `:not(.oscuro)`, pisaría al
+   tema oscuro y el panel saldría en claro con el tema oscuro puesto. De ahí
+   que cada estilo tenga sus dos bloques explícitos.
+
+   Los cuatro valores de `--matriz-*` son monocromos del acento y ninguno es
+   negro. Con la trama a plena intensidad detrás de toda la portada, un mosaico
+   en la misma tinta que el texto competía con él: los rótulos sobre las piezas
+   se leían a medias y las tarjetas atenuadas, nada. En un solo matiz y sin
+   llegar al extremo oscuro, las siete figuras siguen leyéndose como figuras y
+   dejan de pelear con lo que tienen encima.
+
+   `--panel-tinta` es siempre clara en los ocho bloques, y no es un descuido:
+   el panel destacado es oscuro en los dos temas, así que su texto no puede
+   salir de `--hueso`. Cuando salía de ahí, en tema oscuro el rótulo se pintaba
+   del color del fondo de la página —oscuro sobre oscuro— y la cifra principal
+   del consolidado desaparecía.
+
+   Generado desde `scripts/gen_estilos.py`; se edita ahí, no aquí.
+   -------------------------------------------------------------------------- */
+
+
+/* ---- ladrillo ---------------------------------------------------------- */
+:root[data-estilo="ladrillo"]:not(.oscuro) {
+  --hueso: 242 244 249; --hueso-alto: 255 255 255;
+  --hueso-bajo: 247 248 252; --hueso-mesa: 232 236 245;
+  --pieza-fondo: #FFFFFF;
+  --tinta-950: 16 22 34; --tinta-900: 30 38 54; --tinta-700: 66 76 96;
+  --tinta-500: 98 110 132; --tinta-400: 100 110 128; --tinta-300: 202 209 221;
+  --trazo-fino: rgba(16, 22, 34, .09); --trazo-medio: rgba(16, 22, 34, .15); --trazo-grueso: rgba(16, 22, 34, .30);
+  --minio-700: 130 26 20; --minio-600: 166 33 26; --minio-500: 202 52 32; --minio-100: 251 233 228;
+  --cian-900: 46 60 84; --cian-700: 74 92 122; --cian-500: 108 128 160; --cian-100: 231 236 244;
+  --viable: 22 101 78; --tenso: 170 116 22; --riesgo: 166 33 26;
+  --etapa-factibilidad: #6A7280;
+  --etapa-diseno: #637084;
+  --etapa-permisos: #5E6D88;
+  --etapa-obra: #5A6B8C;
+  --etapa-preventa: #47587A;
+  --etapa-entregado: #2A3852;
+  --halo-1: rgba(202, 52, 32, .07); --halo-2: rgba(108, 128, 160, .07); --halo-3: rgba(16, 22, 34, .03);
+  --aurora-1: #CA3420; --aurora-2: #E88A70; --aurora-3: #647596; --aurora-4: #2A3852;
+  --aurora-opacidad: .17;
+  --matriz-letra: #A6211A; --matriz-aura: #E3A79E;
+  --matriz-campo: #F6DED9; --matriz-grano: #8493AE;
+  --panel-fondo: radial-gradient(40rem 26rem at 86% -12%, rgba(226, 88, 58, .30), transparent 66%), radial-gradient(30rem 20rem at 8% 118%, rgba(108, 128, 160, .22), transparent 62%), linear-gradient(152deg, rgb(120 26 20), rgb(74 18 14));
+  --panel-tinta: #FBEDEA;
+}
+
+:root[data-estilo="ladrillo"].oscuro {
+  --hueso: 12 15 23; --hueso-alto: 21 26 38;
+  --hueso-bajo: 16 20 30; --hueso-mesa: 30 37 52;
+  --pieza-fondo: rgba(226, 233, 245, .05);
+  --tinta-950: 240 244 250; --tinta-900: 221 228 239; --tinta-700: 176 187 205;
+  --tinta-500: 133 145 166; --tinta-400: 120 132 152; --tinta-300: 71 82 101;
+  --trazo-fino: rgba(226, 233, 245, .09); --trazo-medio: rgba(226, 233, 245, .15); --trazo-grueso: rgba(226, 233, 245, .26);
+  --minio-700: 228 122 96; --minio-600: 236 136 110; --minio-500: 242 152 126; --minio-100: 62 26 20;
+  --cian-900: 196 208 226; --cian-700: 168 182 204; --cian-500: 140 156 182; --cian-100: 28 36 52;
+  --viable: 106 190 156; --tenso: 214 178 104; --riesgo: 236 128 108;
+  --etapa-factibilidad: #7E889F;
+  --etapa-diseno: #7D8BA7;
+  --etapa-permisos: #7D8EAB;
+  --etapa-obra: #8090AE;
+  --etapa-preventa: #A4B2C9;
+  --etapa-entregado: #D2DAE8;
+  --halo-1: rgba(242, 152, 126, .10); --halo-2: rgba(140, 156, 182, .08); --halo-3: rgba(226, 233, 245, .03);
+  --aurora-1: #E4614A; --aurora-2: #F0947C; --aurora-3: #8C9CB6; --aurora-4: #22293A;
+  --aurora-opacidad: .16;
+  --matriz-letra: #E47A62; --matriz-aura: #7A342A;
+  --matriz-campo: #2A1D1B; --matriz-grano: #5A6478;
+  --panel-fondo: radial-gradient(40rem 26rem at 86% -12%, rgba(242, 152, 126, .22), transparent 66%), radial-gradient(30rem 20rem at 8% 118%, rgba(140, 156, 182, .16), transparent 62%), linear-gradient(152deg, rgb(86 24 18), rgb(38 16 14));
+  --panel-tinta: #FBEDEA;
+}
+
+/* ---- cobalto ---------------------------------------------------------- */
+/* ---- plano --------------------------------------------------------------
+   El papel de dibujo, y el que manda por defecto.
+
+   Es el mismo registro que la portada: papel cálido en lugar de blanco de
+   pantalla, tinta parda en lugar de negro azulado, y el azul de plomada como
+   único acento. La razón no es de gusto — es que esta herramienta se usa junto
+   a un juego de planos, y una interfaz del color del papel sobre el que se
+   trabaja se lee como parte de la mesa en vez de como una ventana encima.
+
+   Los grises van a la misma temperatura que el papel. Un gris frío sobre papel
+   cálido tira a verde, y era lo que pasaba con la rampa azulada del cobalto en
+   cuanto el fondo dejaba de ser blanco.
+   ------------------------------------------------------------------------- */
+:root[data-estilo="plano"]:not(.oscuro) {
+  --hueso: 247 245 241; --hueso-alto: 253 252 250;
+  --hueso-bajo: 242 239 234; --hueso-mesa: 234 230 223;
+  --pieza-fondo: #FDFCFA;
+  --tinta-950: 25 23 19; --tinta-900: 42 38 32; --tinta-700: 74 69 61;
+  --tinta-500: 90 85 77; --tinta-400: 116 110 100; --tinta-300: 190 184 174;
+  --trazo-fino: rgba(36, 31, 24, .10); --trazo-medio: rgba(36, 31, 24, .17); --trazo-grueso: rgba(36, 31, 24, .34);
+  --minio-700: 21 66 154; --minio-600: 31 95 214; --minio-500: 45 116 240; --minio-100: 223 232 249;
+  --cian-900: 24 84 116; --cian-700: 42 134 184; --cian-500: 96 176 212; --cian-100: 224 240 246;
+  --viable: 31 95 214; --tenso: 150 116 46; --riesgo: 194 52 42;
+  --etapa-factibilidad: #6E6154;
+  --etapa-diseno: #5E6E86;
+  --etapa-permisos: #3F6EA5;
+  --etapa-obra: #26629F;
+  --etapa-preventa: #1B4B8F;
+  --etapa-entregado: #14304F;
+  --halo-1: rgba(31, 95, 214, .05); --halo-2: rgba(150, 116, 46, .04); --halo-3: rgba(36, 31, 24, .03);
+  --aurora-1: #1F5FD6; --aurora-2: #96742E; --aurora-3: #15429A; --aurora-4: #14304F;
+  --aurora-opacidad: .12;
+  --matriz-letra: #1F5FD6; --matriz-aura: #B8AE9C;
+  --matriz-campo: #E8E3DA; --matriz-grano: #98907F;
+  --panel-fondo: radial-gradient(38rem 24rem at 88% -10%, rgba(31, 95, 214, .30), transparent 64%), linear-gradient(152deg, rgb(32 28 22), rgb(20 18 14));
+  --panel-tinta: #F4F0E8;
+}
+
+:root[data-estilo="plano"].oscuro {
+  --hueso: 16 14 11; --hueso-alto: 24 21 16;
+  --hueso-bajo: 20 18 14; --hueso-mesa: 38 34 27;
+  --pieza-fondo: rgba(240, 232, 218, .045);
+  --tinta-950: 244 240 232; --tinta-900: 228 222 211; --tinta-700: 183 176 164;
+  --tinta-500: 150 143 131; --tinta-400: 136 129 118; --tinta-300: 88 82 73;
+  --trazo-fino: rgba(240, 232, 218, .10); --trazo-medio: rgba(240, 232, 218, .17); --trazo-grueso: rgba(240, 232, 218, .30);
+  --minio-700: 150 186 255; --minio-600: 124 166 250; --minio-500: 100 148 246; --minio-100: 22 32 54;
+  --cian-900: 190 222 238; --cian-700: 160 205 226; --cian-500: 128 186 212; --cian-100: 18 32 40;
+  --viable: 124 166 250; --tenso: 206 172 96; --riesgo: 238 116 104;
+  --etapa-factibilidad: #9A8E7C;
+  --etapa-diseno: #8C9AB2;
+  --etapa-permisos: #7EA2CE;
+  --etapa-obra: #7FB0E2;
+  --etapa-preventa: #A6CCEE;
+  --etapa-entregado: #D6E6F6;
+  --halo-1: rgba(100, 148, 246, .10); --halo-2: rgba(206, 172, 96, .05); --halo-3: rgba(240, 232, 218, .03);
+  --aurora-1: #5C93FF; --aurora-2: #CEAC60; --aurora-3: #1A3F86; --aurora-4: #241F18;
+  --aurora-opacidad: .13;
+  --matriz-letra: #7CA6FA; --matriz-aura: #33291C;
+  --matriz-campo: #201C15; --matriz-grano: #6B6355;
+  --panel-fondo: radial-gradient(38rem 24rem at 88% -10%, rgba(100, 148, 246, .22), transparent 64%), linear-gradient(152deg, rgb(34 30 24), rgb(16 14 11));
+  --panel-tinta: #F4F0E8;
+}
+
+/* ---- cobalto ----------------------------------------------------------- */
+:root[data-estilo="cobalto"]:not(.oscuro) {
+  --hueso: 250 251 253; --hueso-alto: 255 255 255;
+  --hueso-bajo: 244 247 251; --hueso-mesa: 233 240 249;
+  --pieza-fondo: #FFFFFF;
+  --tinta-950: 8 12 22; --tinta-900: 20 27 42; --tinta-700: 58 70 92;
+  --tinta-500: 100 114 138; --tinta-400: 101 114 134; --tinta-300: 200 210 224;
+  --trazo-fino: rgba(8, 12, 22, .09); --trazo-medio: rgba(8, 12, 22, .16); --trazo-grueso: rgba(8, 12, 22, .32);
+  --minio-700: 10 62 150; --minio-600: 16 86 200; --minio-500: 28 110 235; --minio-100: 219 233 252;
+  --cian-900: 22 92 148; --cian-700: 56 140 200; --cian-500: 108 186 238; --cian-100: 224 242 253;
+  --viable: 16 86 200; --tenso: 112 132 158; --riesgo: 214 40 57;
+  --etapa-factibilidad: #4A7691;
+  --etapa-diseno: #34759F;
+  --etapa-permisos: #2570AE;
+  --etapa-obra: #256ABB;
+  --etapa-preventa: #1B4B8F;
+  --etapa-entregado: #0E2647;
+  --halo-1: rgba(28, 110, 235, .07); --halo-2: rgba(108, 186, 238, .07); --halo-3: rgba(8, 12, 22, .03);
+  --aurora-1: #1C6EEB; --aurora-2: #6CBAEE; --aurora-3: #0A3E96; --aurora-4: #0E2647;
+  --aurora-opacidad: .18;
+  --matriz-letra: #1056C8; --matriz-aura: #9CB8E8;
+  --matriz-campo: #DCE7F7; --matriz-grano: #8C9CB4;
+  --panel-fondo: radial-gradient(38rem 24rem at 88% -10%, rgba(28, 110, 235, .40), transparent 64%), radial-gradient(30rem 20rem at 10% 120%, rgba(108, 186, 238, .18), transparent 60%), linear-gradient(152deg, rgb(16 22 38), rgb(8 12 22));
+  --panel-tinta: #EEF4FF;
+}
+
+:root[data-estilo="cobalto"].oscuro {
+  --hueso: 9 12 20; --hueso-alto: 17 22 34;
+  --hueso-bajo: 13 17 27; --hueso-mesa: 26 33 48;
+  --pieza-fondo: rgba(226, 240, 255, .05);
+  --tinta-950: 244 248 253; --tinta-900: 226 233 242; --tinta-700: 180 192 209;
+  --tinta-500: 136 150 170; --tinta-400: 114 128 148; --tinta-300: 72 85 104;
+  --trazo-fino: rgba(226, 240, 255, .09); --trazo-medio: rgba(226, 240, 255, .15); --trazo-grueso: rgba(226, 240, 255, .26);
+  --minio-700: 146 186 250; --minio-600: 122 170 248; --minio-500: 100 156 246; --minio-100: 18 34 60;
+  --cian-900: 196 226 248; --cian-700: 166 210 245; --cian-500: 136 194 240; --cian-100: 16 34 52;
+  --viable: 122 170 248; --tenso: 150 168 190; --riesgo: 240 110 120;
+  --etapa-factibilidad: #6986AC;
+  --etapa-diseno: #5D8ABE;
+  --etapa-permisos: #4F8ECE;
+  --etapa-obra: #559BD8;
+  --etapa-preventa: #86BEEA;
+  --etapa-entregado: #C8E3F7;
+  --halo-1: rgba(100, 156, 246, .12); --halo-2: rgba(136, 194, 240, .08); --halo-3: rgba(226, 240, 255, .03);
+  --aurora-1: #2E7BF6; --aurora-2: #7FC4F0; --aurora-3: #0F3C86; --aurora-4: #16233C;
+  --aurora-opacidad: .17;
+  --matriz-letra: #6E9CF6; --matriz-aura: #25406E;
+  --matriz-campo: #182234; --matriz-grano: #566078;
+  --panel-fondo: radial-gradient(38rem 24rem at 88% -10%, rgba(100, 156, 246, .28), transparent 64%), radial-gradient(30rem 20rem at 10% 120%, rgba(136, 194, 240, .14), transparent 60%), linear-gradient(152deg, rgb(20 27 44), rgb(9 12 20));
+  --panel-tinta: #EEF4FF;
+}
+
+/* ---- espresso ---------------------------------------------------------- */
+:root[data-estilo="espresso"]:not(.oscuro) {
+  --hueso: 250 246 238; --hueso-alto: 255 252 246;
+  --hueso-bajo: 246 241 231; --hueso-mesa: 240 233 220;
+  --pieza-fondo: #FFFCF6;
+  --tinta-950: 44 31 23; --tinta-900: 62 45 34; --tinta-700: 104 84 68;
+  --tinta-500: 127 107 89; --tinta-400: 125 108 90; --tinta-300: 213 201 185;
+  --trazo-fino: rgba(44, 31, 23, .10); --trazo-medio: rgba(44, 31, 23, .17); --trazo-grueso: rgba(44, 31, 23, .32);
+  --minio-700: 146 66 10; --minio-600: 176 82 14; --minio-500: 198 100 26; --minio-100: 246 229 210;
+  --cian-900: 34 56 38; --cian-700: 52 82 56; --cian-500: 74 110 78; --cian-100: 225 234 224;
+  --viable: 52 96 60; --tenso: 172 116 26; --riesgo: 168 52 32;
+  --etapa-factibilidad: #806A51;
+  --etapa-diseno: #846649;
+  --etapa-permisos: #866344;
+  --etapa-obra: #855F41;
+  --etapa-preventa: #68472F;
+  --etapa-entregado: #46301F;
+  --halo-1: rgba(198, 100, 26, .07); --halo-2: rgba(74, 110, 78, .05); --halo-3: rgba(44, 31, 23, .035);
+  --aurora-1: #C6641A; --aurora-2: #E0A268; --aurora-3: #4A6E4E; --aurora-4: #46301F;
+  --aurora-opacidad: .18;
+  --matriz-letra: #B0520E; --matriz-aura: #DEB48E;
+  --matriz-campo: #F2E4D3; --matriz-grano: #8C9C86;
+  --panel-fondo: radial-gradient(38rem 24rem at 88% -10%, rgba(198, 100, 26, .22), transparent 62%), linear-gradient(152deg, rgb(58 41 30), rgb(38 27 20));
+  --panel-tinta: #FAF3E9;
+}
+
+:root[data-estilo="espresso"].oscuro {
+  --hueso: 24 18 14; --hueso-alto: 34 26 20;
+  --hueso-bajo: 29 22 17; --hueso-mesa: 45 35 27;
+  --pieza-fondo: rgba(255, 244, 230, .05);
+  --tinta-950: 250 245 237; --tinta-900: 235 227 216; --tinta-700: 197 184 169;
+  --tinta-500: 156 141 126; --tinta-400: 144 130 117; --tinta-300: 88 76 65;
+  --trazo-fino: rgba(255, 244, 230, .09); --trazo-medio: rgba(255, 244, 230, .15); --trazo-grueso: rgba(255, 244, 230, .26);
+  --minio-700: 226 150 86; --minio-600: 234 164 100; --minio-500: 240 178 118; --minio-100: 74 44 22;
+  --cian-900: 156 190 158; --cian-700: 138 176 142; --cian-500: 124 164 128; --cian-100: 34 48 36;
+  --viable: 132 186 136; --tenso: 220 182 108; --riesgo: 226 118 96;
+  --etapa-factibilidad: #A1876E;
+  --etapa-diseno: #A6886B;
+  --etapa-permisos: #AB8B6A;
+  --etapa-obra: #BC9C78;
+  --etapa-preventa: #D6BA9A;
+  --etapa-entregado: #EFDCC4;
+  --halo-1: rgba(240, 178, 118, .10); --halo-2: rgba(124, 164, 128, .07); --halo-3: rgba(255, 244, 230, .03);
+  --aurora-1: #E08A3C; --aurora-2: #F0B278; --aurora-3: #7CA480; --aurora-4: #8A5A2E;
+  --aurora-opacidad: .15;
+  --matriz-letra: #E8A470; --matriz-aura: #6B4526;
+  --matriz-campo: #2A2018; --matriz-grano: #6B7A64;
+  --panel-fondo: radial-gradient(38rem 24rem at 88% -10%, rgba(240, 178, 118, .16), transparent 62%), linear-gradient(152deg, rgb(52 39 30), rgb(30 22 17));
+  --panel-tinta: #FAF3E9;
+}
+
+/* ---- monocromo ---------------------------------------------------------- */
+:root[data-estilo="monocromo"]:not(.oscuro) {
+  --hueso: 250 250 249; --hueso-alto: 255 255 255;
+  --hueso-bajo: 246 246 244; --hueso-mesa: 240 240 237;
+  --pieza-fondo: #FFFFFF;
+  --tinta-950: 9 15 5; --tinta-900: 24 30 20; --tinta-700: 61 68 56;
+  --tinta-500: 106 114 100; --tinta-400: 108 115 102; --tinta-300: 205 209 201;
+  --trazo-fino: rgba(9, 15, 5, .09); --trazo-medio: rgba(9, 15, 5, .16); --trazo-grueso: rgba(9, 15, 5, .32);
+  --minio-700: 24 24 24; --minio-600: 38 38 38; --minio-500: 64 64 64; --minio-100: 232 232 231;
+  --cian-900: 32 32 32; --cian-700: 68 68 68; --cian-500: 110 110 110; --cian-100: 235 235 234;
+  --viable: 24 24 24; --tenso: 122 122 122; --riesgo: 199 44 33;
+  --etapa-factibilidad: #6F6F6D;
+  --etapa-diseno: #6D6D6B;
+  --etapa-permisos: #6B6B69;
+  --etapa-obra: #565654;
+  --etapa-preventa: #3A3A38;
+  --etapa-entregado: #1C1C1A;
+  --halo-1: rgba(9, 15, 5, .05); --halo-2: rgba(9, 15, 5, .04); --halo-3: rgba(9, 15, 5, .03);
+  --aurora-1: #2A2A28; --aurora-2: #6E6E6C; --aurora-3: #4A4A48; --aurora-4: #8C8C8A;
+  --aurora-opacidad: .13;
+  --matriz-letra: #4A4A48; --matriz-aura: #AEAEAC;
+  --matriz-campo: #E2E2E0; --matriz-grano: #8C8C8A;
+  --panel-fondo: radial-gradient(38rem 24rem at 88% -10%, rgba(90, 90, 88, .30), transparent 64%), linear-gradient(152deg, rgb(38 38 36), rgb(18 18 16));
+  --panel-tinta: #F4F4F2;
+}
+
+:root[data-estilo="monocromo"].oscuro {
+  --hueso: 10 11 13; --hueso-alto: 20 21 24;
+  --hueso-bajo: 15 16 19; --hueso-mesa: 28 29 33;
+  --pieza-fondo: rgba(255, 255, 255, .045);
+  --tinta-950: 247 248 248; --tinta-900: 228 230 233; --tinta-700: 183 187 194;
+  --tinta-500: 138 143 152; --tinta-400: 123 128 137; --tinta-300: 75 79 87;
+  --trazo-fino: rgba(255, 255, 255, .08); --trazo-medio: rgba(255, 255, 255, .14); --trazo-grueso: rgba(255, 255, 255, .24);
+  --minio-700: 214 214 214; --minio-600: 232 232 232; --minio-500: 246 246 246; --minio-100: 44 44 46;
+  --cian-900: 190 190 192; --cian-700: 214 214 216; --cian-500: 236 236 238; --cian-100: 38 38 40;
+  --viable: 247 248 248; --tenso: 150 150 154; --riesgo: 232 96 82;
+  --etapa-factibilidad: #84868B;
+  --etapa-diseno: #86898F;
+  --etapa-permisos: #8E9199;
+  --etapa-obra: #ACAFB6;
+  --etapa-preventa: #CBCDD2;
+  --etapa-entregado: #EDEEF0;
+  --halo-1: rgba(255, 255, 255, .05); --halo-2: rgba(255, 255, 255, .04); --halo-3: rgba(255, 255, 255, .025);
+  --aurora-1: #FFFFFF; --aurora-2: #B8B8BC; --aurora-3: #DADADE; --aurora-4: #909094;
+  --aurora-opacidad: .10;
+  --matriz-letra: #C8C8CA; --matriz-aura: #5A5A5E;
+  --matriz-campo: #242426; --matriz-grano: #7A7A7E;
+  --panel-fondo: radial-gradient(38rem 24rem at 88% -10%, rgba(255, 255, 255, .12), transparent 64%), linear-gradient(152deg, rgb(40 41 45), rgb(16 17 20));
+  --panel-tinta: #F4F4F2;
+}

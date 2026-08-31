@@ -1,0 +1,1468 @@
+/* Las cuatro paletas seleccionables. Va lo primero: `@import` sólo es válido
+   antes de cualquier otra regla. */
+@import "./estilos.css";
+
+/* Instrument Sans para el cuerpo, en lugar de Inter.
+   Inter estaba elegida por muda, y lo es — pero muda de más: dieciocho fichas
+   compuestas en Inter se leen como el panel de control de cualquier cosa.
+   Instrument Sans es de la misma familia de dibujo que el serif de titular que
+   ya usábamos, así que rótulo y cuerpo por fin vienen del mismo sitio: caja
+   ligeramente estrecha, terminales cortados en horizontal, y una `a` y una `g`
+   con más carácter que las de Inter sin perder un ápice de legibilidad a 15 px.
+   Inter se queda de recambio. */
+/* Ojo con los nombres: los dos ficheros están cruzados en disco.
+   `instrumentsans.woff2` es la CURSIVA —lleva el bit 2 de `macStyle` y un
+   ángulo de −13°— y `instrumentsans-italic.woff2` es la redonda. Mientras
+   estuvieron declarados por su nombre de fichero, la interfaz entera salía
+   inclinada: la navegación, los nombres de proyecto, las cifras. Se apuntan
+   por lo que son, no por cómo se llaman. */
+/* Los dos ficheros estaban cruzados: el llamado `-italic` traía la redonda y
+   el otro la cursiva, y las declaraciones lo compensaban al revés. Funcionaba,
+   pero cualquiera que tocara esto mirando el nombre del fichero se encontraba
+   la cursiva sin saber por qué. Renombrados y declarados en su sitio. */
+/* Registrada como número para que se pueda interpolar. Sin esto el navegador
+   la trata como una cadena y el relieve aparecería de golpe en vez de crecer. */
+@property --pf-canto {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+
+@font-face{font-family:"Instrument Sans";src:url(/fonts/instrumentsans.woff2) format("woff2");font-weight:400 700;font-style:normal;font-display:swap}
+@font-face{font-family:"Instrument Sans";src:url(/fonts/instrumentsans-italic.woff2) format("woff2");font-weight:400 700;font-style:italic;font-display:swap}
+/* --------------------------------------------------------------------------
+   Space Grotesk de rótulo, Plus Jakarta Sans de cuerpo, Geist Mono de cota.
+
+   La de casa son tres voces de tres familias: Space Grotesk arriba, Jakarta en
+   el cuerpo y la interfaz, y Geist Mono en la cota y la etiqueta. El rótulo
+   tiene voz, el párrafo la tiene más baja, y la cota habla en otro registro
+   porque dice otra cosa — una medida, no una frase.
+
+   El camino hasta aquí importa porque explica la elección. Se probó Plex en sus
+   tres voces —serif arriba, sans debajo, mono en la cota— buscando registro de
+   documento técnico. Está bien dibujada y es la letra del oficio, pero en la
+   portada hace lo contrario de lo que se le pedía: el titular habla en serif y
+   el párrafo de al lado en sans, y a cuerpo de cartel ese salto no se lee como
+   jerarquía sino como dos páginas pegadas.
+
+   Con una sola grotesca arriba y abajo, la jerarquía la marcan el cuerpo, el
+   peso y el interletraje —que es como la marcan las grotescas— y la primera
+   pantalla suena a una sola voz. Plex sigue entera detrás del juego
+   «Documento», que es donde tiene sentido: mirando partidas, no leyendo un
+   cartel.
+
+   Van dos ficheros por corte. El primero cubre latín básico y el segundo el
+   extendido; el navegador sólo descarga el que necesita, y el `unicode-range`
+   es lo que se lo dice. Sin partir, una página en castellano se traería
+   veinticinco kilobytes de acentos que casi no usa.
+   -------------------------------------------------------------------------- */
+@font-face{font-family:"IBM Plex Sans";src:url(/fonts/plexsans.woff2) format("woff2");font-weight:100 700;font-display:swap;
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"IBM Plex Sans";src:url(/fonts/plexsans-ext.woff2) format("woff2");font-weight:100 700;font-display:swap;
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+
+/* Serif y mono de Plex no son variables: se sirven por peso, así que van los tres
+   cortes que la interfaz usa —regular, medio y semi— y ninguno más. */
+@font-face{font-family:"IBM Plex Serif";src:url(/fonts/plexserif-400.woff2) format("woff2");font-weight:400;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+2000-206F,U+20AC,U+2122,U+2212,U+FEFF,U+FFFD}
+@font-face{font-family:"IBM Plex Serif";src:url(/fonts/plexserif-400-ext.woff2) format("woff2");font-weight:400;font-display:swap;unicode-range:U+0100-02BA,U+1E00-1E9F,U+2020,U+20A0-20AB,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"IBM Plex Serif";src:url(/fonts/plexserif-500.woff2) format("woff2");font-weight:500;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+2000-206F,U+20AC,U+2122,U+2212,U+FEFF,U+FFFD}
+@font-face{font-family:"IBM Plex Serif";src:url(/fonts/plexserif-500-ext.woff2) format("woff2");font-weight:500;font-display:swap;unicode-range:U+0100-02BA,U+1E00-1E9F,U+2020,U+20A0-20AB,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"IBM Plex Serif";src:url(/fonts/plexserif-600.woff2) format("woff2");font-weight:600;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+2000-206F,U+20AC,U+2122,U+2212,U+FEFF,U+FFFD}
+@font-face{font-family:"IBM Plex Serif";src:url(/fonts/plexserif-600-ext.woff2) format("woff2");font-weight:600;font-display:swap;unicode-range:U+0100-02BA,U+1E00-1E9F,U+2020,U+20A0-20AB,U+2C60-2C7F,U+A720-A7FF}
+
+@font-face{font-family:"IBM Plex Mono";src:url(/fonts/plexmono-400.woff2) format("woff2");font-weight:400;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+2000-206F,U+20AC,U+2122,U+2212,U+FEFF,U+FFFD}
+@font-face{font-family:"IBM Plex Mono";src:url(/fonts/plexmono-400-ext.woff2) format("woff2");font-weight:400;font-display:swap;unicode-range:U+0100-02BA,U+1E00-1E9F,U+2020,U+20A0-20AB,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"IBM Plex Mono";src:url(/fonts/plexmono-500.woff2) format("woff2");font-weight:500;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+2000-206F,U+20AC,U+2122,U+2212,U+FEFF,U+FFFD}
+@font-face{font-family:"IBM Plex Mono";src:url(/fonts/plexmono-500-ext.woff2) format("woff2");font-weight:500;font-display:swap;unicode-range:U+0100-02BA,U+1E00-1E9F,U+2020,U+20A0-20AB,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"IBM Plex Mono";src:url(/fonts/plexmono-600.woff2) format("woff2");font-weight:600;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+2000-206F,U+20AC,U+2122,U+2212,U+FEFF,U+FFFD}
+@font-face{font-family:"IBM Plex Mono";src:url(/fonts/plexmono-600-ext.woff2) format("woff2");font-weight:600;font-display:swap;unicode-range:U+0100-02BA,U+1E00-1E9F,U+2020,U+20A0-20AB,U+2C60-2C7F,U+A720-A7FF}
+
+/* --------------------------------------------------------------------------
+   Anton: la voz de rótulo.
+
+   Una grotesca ultracondensada y muy negra, de las de cartel. Es la que hace
+   que un rótulo pese sin necesidad de cuerpo: a la misma altura de caja mete
+   casi el doble de letras que una grotesca normal, así que una palabra sola
+   —«Prefacti»— llena el ancho de la columna y se lee como una marca en vez de
+   como un titular.
+
+   Trae un solo peso, el 400, y ahí está su regla: pedirle 700 hace que el
+   navegador lo engorde por su cuenta —negrita sintética— y el dibujo se
+   emborrona. Por eso el bloque de abajo fija el peso y apaga la síntesis.
+
+   Va sólo en rótulo y marca. Las cifras siguen en la sans: una condensada de
+   cartel en una columna de importes es ilegible a un metro, que es justo la
+   distancia a la que se mira un balance.
+   -------------------------------------------------------------------------- */
+@font-face{font-family:Anton;src:url(/fonts/anton.woff2) format("woff2");font-weight:400;font-display:swap;
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:Anton;src:url(/fonts/anton-ext.woff2) format("woff2");font-weight:400;font-display:swap;
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+
+/* --------------------------------------------------------------------------
+   Space Grotesk: la alternativa de rótulo, en el eje «Cartel».
+
+   Geist sostiene el cuerpo y la interfaz, pero de rótulo no dice nada: es una
+   grotesca neutra, y a cuerpo de cartel la neutralidad se lee como ausencia de
+   decisión. Space Grotesk está dibujada desde una mono —de ahí las cajas
+   cuadradas, la `a` con el terminal cortado a plomo y la `e` de barra baja— y
+   ese origen es exactamente el registro de la página: una herramienta que mide
+   solares y compone contra una retícula.
+
+   Va sólo arriba. Abajo sigue Geist, porque una grotesca con carácter en
+   párrafo largo cansa, y porque el contraste entre las dos voces es lo que
+   marca la jerarquía sin subir un cuerpo más.
+   -------------------------------------------------------------------------- */
+@font-face{font-family:"Space Grotesk";src:url(/fonts/spacegrotesk.woff2) format("woff2");font-weight:300 700;font-display:swap;
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Space Grotesk";src:url(/fonts/spacegrotesk-ext.woff2) format("woff2");font-weight:300 700;font-display:swap;
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+
+/* --------------------------------------------------------------------------
+   Plus Jakarta Sans: el cuerpo y la interfaz.
+
+   Geist sostenía bien y no decía nada, que para una neutra es el elogio y
+   también el límite: la aplicación entera se leía correcta y anónima. Jakarta
+   es geométrica de esqueleto y humanista de detalle —ascendentes largas, `a` y
+   `g` de dos pisos con la curva abierta, terminales ligeramente inclinados— y
+   eso se nota en pantalla llena de datos: la misma tabla parece dibujada en
+   vez de compuesta por defecto.
+
+   Trae cifras de ancho fijo, que aquí no es un extra: media aplicación son
+   columnas de importes, y sin `tnum` bailan.
+   -------------------------------------------------------------------------- */
+@font-face{font-family:"Plus Jakarta Sans";src:url(/fonts/jakarta.woff2) format("woff2");font-weight:200 800;font-display:swap;
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Plus Jakarta Sans";src:url(/fonts/jakarta-ext.woff2) format("woff2");font-weight:200 800;font-display:swap;
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+
+/* Geist: la mono de la cota, y el recambio del cuerpo. Variable en los dos
+   cortes, latín básico y extendido. */
+@font-face{font-family:Geist;src:url(/fonts/geist.woff2) format("woff2");font-weight:100 900;font-display:swap;
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:Geist;src:url(/fonts/geist-ext.woff2) format("woff2");font-weight:100 900;font-display:swap;
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Geist Mono";src:url(/fonts/geistmono.woff2) format("woff2");font-weight:100 900;font-display:swap;
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Geist Mono";src:url(/fonts/geistmono-ext.woff2) format("woff2");font-weight:100 900;font-display:swap;
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+
+@font-face{font-family:Inter;src:url(/fonts/inter.woff2) format("woff2");font-weight:100 900;font-display:swap}
+@font-face{font-family:Archivo;src:url(/fonts/archivo.woff2) format("woff2");font-weight:100 900;font-display:swap}
+/* Fraunces: variable de 100 a 900 con eje óptico. Se declara el rango
+   entero para que `font-weight` lo module de verdad; el eje óptico se
+   ajusta por clase, más abajo. */
+@font-face{font-family:Fraunces;src:url(/fonts/fraunces.woff2) format("woff2");font-weight:100 900;font-display:swap}
+@font-face{font-family:"Instrument Serif";src:url(/fonts/instrumentserif.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Roboto Mono";src:url(/fonts/robotomono.woff2) format("woff2");font-weight:100 700;font-display:swap}
+
+/* --------------------------------------------------------------------------
+   Los tres ejes de forma.
+
+   Además del color, quien usa la aplicación elige tres cosas más: el canto de
+   las piezas, cómo se separan del fondo y con qué letra está compuesta. Van
+   como atributos en el `<html>` —igual que el estilo de color— así que cambian
+   la interfaz entera sin que ninguna pantalla lleve una clase condicional.
+
+   Los valores por defecto son los de la casa. Si el atributo falta, mandan
+   éstos, de modo que la aplicación funciona igual sin haber elegido nada.
+   -------------------------------------------------------------------------- */
+:root {
+  /* Los cuatro radios bajan un escalón.
+     Estaban en 10 / 14 / 20 / 28 px. Los dos primeros eran razonables y los dos
+     últimos no: a 28 px una pieza deja de leerse como una superficie de trabajo
+     y empieza a leerse como una tarjeta de aplicación de móvil, que es
+     exactamente el canto que delata a una plantilla. El sistema se cierra en
+     8 / 12 / 16 / 20, con el salto todavía visible entre un control y la caja
+     que lo contiene pero sin que nada llegue a parecer un juguete. */
+  --radio-control: 0.5rem;
+  --radio-pieza:   0.75rem;
+  --radio-caja:    1rem;
+  --radio-hueco:   1.25rem;
+
+  /* Una sola grotesca para toda la portada, y su mono para las cotas.
+     El serif de documento daba voz al rótulo pero lo separaba del resto: el
+     titular hablaba en una familia y los párrafos en otra, y a tamaño de
+     cartel eso se lee como dos páginas pegadas. Con Geist arriba y abajo, la
+     jerarquía la marcan el cuerpo y el interletraje —que es como la marcan las
+     grotescas— y la página entera suena a una sola voz. Los ejes de
+     Configuración siguen ofreciendo el serif a quien lo prefiera. */
+  --fuente-display: Anton;
+  --fuente-sans: "Plus Jakarta Sans";
+  --fuente-mono: "Geist Mono";
+  /* La marca no sigue al eje de letra: es el logotipo y es siempre el mismo,
+     elija quien mire el juego que elija. */
+  --fuente-marca: "IBM Plex Serif";
+
+  /* Cómo se despega una pieza del papel: sombra, filete o las dos. */
+  --lamina-sombra: var(--sombra-pieza);
+  --lamina-sombra-viva: var(--sombra-media);
+  --lamina-filete: 1px;
+  --lamina-canto: inset 0 1px 0 var(--canto);
+
+  /* La altura de fila de tablas y listas. Es el cuarto eje de presentación,
+     junto al canto, la superficie y la letra, y el que más se nota en una
+     herramienta donde se miran doscientas partidas de presupuesto seguidas. */
+  --fila-y: 0.625rem;
+}
+
+/* Compacta: la fila baja de veinte píxeles de relleno vertical a doce. Cabe
+   alrededor de un tercio más de tabla en la misma pantalla, que es de lo que se
+   trata; por debajo de esto las filas dejan de separarse a ojo y hay que seguir
+   la línea con el dedo. */
+[data-densidad="compacta"] { --fila-y: 0.375rem; }
+
+/* Canto redondeado: el de la casa. A veinte píxeles la pieza se lee como
+   papel recortado. */
+[data-canto="suave"] {
+  --radio-control: 0.375rem;
+  --radio-pieza:   0.5rem;
+  --radio-caja:    0.75rem;
+  --radio-hueco:   1rem;
+}
+/* Canto vivo: nada de radio salvo el mínimo que impide que el píxel de la
+   esquina se vea dentado. La interfaz se lee como una hoja de expediente. */
+[data-canto="recto"] {
+  --radio-control: 0.125rem;
+  --radio-pieza:   0.1875rem;
+  --radio-caja:    0.25rem;
+  --radio-hueco:   0.375rem;
+}
+
+/* Plano: Space Grotesk de rótulo sobre Plus Jakarta Sans de cuerpo, con Geist
+   Mono en la cota. Es la de la casa, así que repite lo que ya dice `:root`; se deja
+   escrita para que el eje se lea entero de una vez. La clave sigue siendo
+   `neutra` a propósito: es lo que hay guardado en el navegador de quien ya
+   eligió, y cambiarla le devolvería la letra a la de por defecto sin haber
+   tocado nada. */
+[data-letra="neutra"] {
+  --fuente-display: Anton;
+  --fuente-sans: "Plus Jakarta Sans";
+  --fuente-mono: "Geist Mono";
+}
+/* Cartel: la condensada baja un punto y sube Space Grotesk, que es grotesca de
+   rótulo sin llegar a cartel. Para quien tenga que leer muchos titulares
+   seguidos y la ultracondensada se le haga densa. */
+[data-letra="cartel"] {
+  --fuente-display: "Space Grotesk";
+  --fuente-sans: "Plus Jakarta Sans";
+  --fuente-mono: "Geist Mono";
+}
+/* Documento: IBM Plex en sus tres voces. El serif sube al rótulo y la página
+   pasa a leerse como un balance impreso, con el salto de voz marcando la
+   jerarquía. Deja de ser la de la casa —el rótulo de portada pedía una sola
+   familia— pero sigue disponible para quien trabaje mirando partidas. */
+[data-letra="documento"] {
+  --fuente-display: "IBM Plex Serif";
+  --fuente-sans: "IBM Plex Sans";
+  --fuente-mono: "IBM Plex Mono";
+}
+/* Editorial: el serif de alta modulación, con más voz que el de documento. */
+[data-letra="editorial"] {
+  --fuente-display: Fraunces;
+  --fuente-sans: "Instrument Sans";
+  --fuente-mono: "Roboto Mono";
+}
+/* Grotesca: rótulo con carácter de cartel y cuerpo neutro debajo. */
+[data-letra="grotesca"] {
+  --fuente-display: Archivo;
+  --fuente-sans: Inter;
+  --fuente-mono: "Roboto Mono";
+}
+
+/* Lámina plana: fuera las sombras, manda el filete. Es el registro de una
+   herramienta densa —tablas y columnas— donde cada sombra repetida treinta
+   veces se convierte en suciedad. */
+[data-lamina="plano"] {
+  --lamina-sombra: none;
+  --lamina-sombra-viva: none;
+  --lamina-filete: 1px;
+  --lamina-canto: none;
+}
+/* Contorno: sin sombra y con el filete al doble, del color del trazo medio.
+   La jerarquía la lleva entera la línea, como en un plano. */
+[data-lamina="contorno"] {
+  --lamina-sombra: none;
+  --lamina-sombra-viva: none;
+  --lamina-filete: 1.5px;
+  --lamina-canto: none;
+  --pieza-borde: var(--trazo-medio);
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* --------------------------------------------------------------------------
+   Los dos temas.
+
+   Todo el color del panel sale de aquí. Tailwind ya no lleva ni un hex: sus
+   plantas apuntan a estas variables, así que cambiar de tema es cambiar un
+   `class` en el `<html>` y nada más — ni una clase condicional en las
+   pantallas, ni un `dark:` repetido doscientas veces.
+
+   Los canales van sueltos (`24 24 24`) para que Tailwind pueda seguir
+   componiendo opacidades: `text-tinta-500/70` necesita meter el alfa dentro
+   del `rgb()`. Lo que ya nace con alfa —filetes, vidrios, sombras— va como
+   color completo, y ésos no admiten modificador de opacidad.
+   -------------------------------------------------------------------------- */
+:root {
+  color-scheme: light;
+
+  /* El fondo de prefacti.com: un gris azulado muy claro, no blanco.
+     Las piezas sí son blancas, y ese medio punto de diferencia es lo que las
+     despega sin necesidad de filete — la misma operación que hace el sitio
+     original, y la razón de que allí las tarjetas se lean como tarjetas. */
+  --hueso: 250 251 253;
+  --hueso-alto: 255 255 255;
+  --hueso-bajo: 244 247 251;
+  --hueso-mesa: 233 240 249;
+
+  /* La pieza deja de llevar filete en claro. Lo que la separa del fondo es la
+     diferencia de superficie —blanco puro sobre hueso— y una sombra difusa;
+     el borde de un pixel, repetido en dieciocho tarjetas, era justo lo que
+     hacía que la pantalla se leyera como una hoja de cálculo. */
+  --pieza-fondo: #FFFFFF;
+  --pieza-borde: transparent;
+
+  /* Tinta azulada, de la familia del fondo. Contra el ladrillo del acento, un
+     negro cálido se le acercaría y los dos perderían; frío, cada uno se queda
+     en su sitio. */
+  --tinta-950: 8 12 22;
+  --tinta-900: 20 27 42;
+  --tinta-700: 58 70 92;
+  --tinta-500: 100 114 138;
+  --tinta-400: 101 114 134;
+  --tinta-300: 200 210 224;
+
+  /* Filetes. En claro tiran a tinta; en oscuro, a luz. */
+  --trazo-fino: rgba(8, 12, 22, .09);
+  --trazo-medio: rgba(8, 12, 22, .16);
+  --trazo-grueso: rgba(8, 12, 22, .32);
+
+  /* Vidrios, de hundido a saliente. `hondo` es el gris de sección —el
+     equivalente al `gray-50` del encargo— y los otros tres son blancos casi
+     opacos: sobre lienzo blanco, un cristal muy transparente desaparece. */
+  --vidrio-hondo: rgba(8, 12, 22, .032);
+  --vidrio: rgba(255, 255, 255, .80);
+  --vidrio-alto: rgba(255, 255, 255, .93);
+  --vidrio-tope: rgba(255, 255, 255, 1);
+
+  /* ---- El ladrillo de Prefacti --------------------------------------------
+     El color de marca vuelve de donde salió: el rojo ladrillo de prefacti.com.
+     Es el rojo de plomada y marca de obra —de ahí el nombre `minio`, que
+     llevaba puesto desde el primer día— y en una herramienta de factibilidad
+     inmobiliaria significa algo que un azul corporativo no significa.
+
+     Manda solo. La segunda voz es pizarra: un azul sin saturar, de la familia
+     del fondo, para todo lo que necesita distinguirse sin llamar. Dos acentos
+     compitiendo obligan al lector a aprender cuál manda; un acento y un neutro
+     con temperatura, no.
+
+     Riesgo comparte el ladrillo a propósito, dos pasos más oscuro. En esta
+     herramienta la alarma y la marca son el mismo gesto —una marca de obra
+     sobre un plano— y separarlos en dos rojos distintos sólo habría añadido un
+     rojo más a la pantalla. */
+  --minio-700: 10 62 150;
+  --minio-600: 16 86 200;
+  --minio-500: 28 110 235;
+  --minio-100: 219 233 252;
+
+  --cian-900: 22 92 148;
+  --cian-700: 56 140 200;
+  --cian-500: 108 186 238;
+  --cian-100: 224 242 253;
+
+  /* Lo viable en verde profundo y lo tenso en ámbar: son los dos únicos sitios
+     donde entra un color que no es ni ladrillo ni pizarra, y entran porque un
+     margen sano y un margen justo tienen que distinguirse a un metro. */
+  --viable: 16 86 200;
+  --tenso: 112 132 158;
+  --riesgo: 214 40 57;
+
+  /* Las seis etapas van en pizarra, no en ladrillo: el rojo está reservado a
+     la marca y al riesgo, y una etapa no es ninguna de las dos cosas. Un solo
+     matiz y seis valores, de claro a oscuro siguiendo el avance de la obra, así
+     que la rampa distingue y además ordena. Las lee `lib/data.ts` por `var()`,
+     de modo que también cambian con el tema. */
+  --etapa-factibilidad: #4A7691;
+  --etapa-diseno: #34759F;
+  --etapa-permisos: #2570AE;
+  --etapa-obra: #256ABB;
+  --etapa-preventa: #1B4B8F;
+  --etapa-entregado: #0E2647;
+
+  /* Sombras. En claro, tinta muy diluida; el brillo de canto no existe. */
+  --canto: rgba(255, 255, 255, 0);
+  --sombra-pieza: 0 1px 2px rgba(16, 22, 34, .05), 0 8px 24px -14px rgba(16, 22, 34, .15);
+  --sombra-media: 0 2px 4px rgba(16, 22, 34, .05), 0 18px 44px -18px rgba(16, 22, 34, .22);
+  --sombra-flota: 0 4px 8px rgba(16, 22, 34, .05), 0 28px 60px -22px rgba(16, 22, 34, .26);
+
+  /* El halo del panel sube de intensidad. A .05 era una corrección de blanco
+     que sólo se veía comparando capturas; el panel entero se leía como una
+     hoja en blanco con tarjetas encima. A este nivel el fondo tiene
+     temperatura —cálido arriba a la izquierda, frío abajo a la derecha— sin
+     llegar a ser un color. */
+  --halo-1: rgba(28, 110, 235, .07);
+  --halo-2: rgba(108, 186, 238, .07);
+  --halo-3: rgba(8, 12, 22, .05);
+  /* El papel milimetrado del fondo. */
+  --reja-fina:   rgba(8, 12, 22, .034);
+  --reja-gruesa: rgba(8, 12, 22, .055);
+
+  --barra: rgba(16, 22, 34, .18);
+  --barra-viva: rgba(16, 22, 34, .30);
+
+  /* Fondo del panel oscuro. Va en variable porque cada estilo trae el suyo:
+     es la pieza donde más se nota de qué color es el producto. */
+  --panel-fondo:
+    radial-gradient(38rem 24rem at 88% -10%, rgba(28, 110, 235, .40), transparent 64%),
+    radial-gradient(30rem 20rem at 10% 120%, rgba(108, 186, 238, .18), transparent 60%),
+    linear-gradient(152deg, rgb(16 22 38), rgb(8 12 22));
+  --panel-tinta: #EEF4FF;
+
+  /* Los cuatro valores de la matriz de intro. Van en variable y no en el
+     componente porque tienen que invertirse con el tema: sobre negro, la
+     palabra escondida se lee en claro. */
+  --matriz-letra: #1056C8;
+  --matriz-aura:  #9CB8E8;
+  --matriz-campo: #DCE7F7;
+  --matriz-grano: #8C9CB4;
+
+  /* ---- Cristal líquido ----------------------------------------------------
+     Un cristal de verdad no es un rectángulo semitransparente. Tiene un canto
+     que recoge la luz por arriba, una sombra propia por dentro del canto
+     inferior, y desvía el color de lo que hay detrás en vez de dejarlo pasar
+     tal cual — de ahí el `saturate` del desenfoque, que es lo que hace que un
+     naranja del fondo llegue al cristal más vivo y no más lavado.
+
+     Va en degradado y no en color plano porque una lámina de vidrio nunca
+     tiene el mismo grosor aparente arriba que abajo. */
+  --cristal-fondo: linear-gradient(152deg, rgba(255,255,255,.86), rgba(255,255,255,.52));
+  --cristal-borde: rgba(255, 255, 255, .94);
+  --cristal-luz:
+    inset 0 1px 0 rgba(255, 255, 255, .95),
+    inset 0 -1px 0 rgba(16, 22, 34, .06);
+  /* El reflejo especular: la banda de luz que cruza la lámina en diagonal. */
+  --cristal-brillo: linear-gradient(118deg, rgba(255,255,255,.62) 0%, rgba(255,255,255,0) 38%);
+
+  /* Sombra de tres capas. Una sola sombra dibuja un objeto pegado a la pared;
+     tres —contacto, cuerpo y difusa— lo levantan de ella. */
+  --sombra-3d:
+    0 2px 4px rgba(16, 22, 34, .05),
+    0 14px 28px -12px rgba(16, 22, 34, .16),
+    0 48px 76px -36px rgba(16, 22, 34, .28);
+  --sombra-3d-viva:
+    0 3px 6px rgba(16, 22, 34, .06),
+    0 22px 42px -14px rgba(16, 22, 34, .22),
+    0 70px 110px -40px rgba(16, 22, 34, .36);
+
+  /* Los cuatro focos de la aurora. Son los colores de la marca llevados al
+     extremo de saturación: en el fondo, tras 90 px de desenfoque, un tono
+     medido se convierte en gris. */
+  /* La aurora sí lleva color: es fondo, va a 90 px de desenfoque y no compite
+     con nada. Cobalto y ámbar quemado en diagonal — frío arriba, cálido abajo
+     — para que el papel tenga temperatura sin llegar a tener tono. */
+  --aurora-1: #1C6EEB;
+  --aurora-2: #6CBAEE;
+  --aurora-3: #0A3E96;
+  --aurora-4: #0E2647;
+  --aurora-opacidad: .17;
+
+  /* ---- La portada -------------------------------------------------------
+     La portada deja de tener paleta propia y pasa a derivar de la del panel.
+
+     Tenía la suya —un azul fijo sobre blanco frío— con el argumento de que una
+     página de venta no es una herramienta. El argumento no se sostiene cuando
+     la herramienta deja elegir entre cinco juegos de color: con Monocromo
+     puesto en el panel, la portada seguía saliendo azul, y eso no es una
+     decisión de registro, es que son dos productos. Ahora todo sale de las
+     mismas plantas, así que el estilo que se elija manda en las dos partes y
+     no hay nada que mantener sincronizado a mano.
+
+     Lo único que la portada añade son cuatro cosas que el panel no necesita:
+     el velo de la banda, la retícula milimetrada, las guías punteadas de la
+     columna maestra y una sombra más larga para el visual del titular. */
+  --p-fondo: rgb(var(--hueso));
+  --p-lamina: rgb(var(--hueso-bajo));
+  --p-lamina-alta: rgb(var(--hueso-alto));
+  --p-borde: var(--trazo-fino);
+  --p-borde-vivo: var(--trazo-medio);
+  --p-texto: rgb(var(--tinta-950));
+  --p-suave: rgb(var(--tinta-500));
+  --p-tenue: rgb(var(--tinta-400));
+  --p-acento: rgb(var(--minio-600));
+  --p-acento-tenue: rgb(var(--minio-600) / .08);
+  --p-cian: rgb(var(--cian-700));
+  /* El azul del fondo del relieve. Es el mismo tono del acento llevado un
+     escalón abajo: el rótulo tiene que leerse como una pieza de un solo color
+     con volumen, no como dos colores pegados. */
+  --p-acento-hondo: rgb(8 44 112);
+  /* La marca. Van fijos y fuera del tema a propósito: el bloque azul con la
+     palabra en blanco es el logotipo, y un logotipo que se repinta según el
+     tema del navegador deja de ser el mismo en las dos versiones. */
+  --p-marca-fondo: rgb(28 58 110);
+  --p-marca-tinta: #fff;
+  /* Cuánto canto tiene la marca, de 0 a 1. Uno en todas partes; sólo la de la
+     primera pantalla lo levanta al cargar. */
+  --pf-canto: 1;
+  --p-halo: rgb(var(--minio-600) / .06);
+  --p-velo: rgb(var(--hueso) / .82);
+  --p-sombra:
+    0 2px 4px rgb(var(--tinta-950) / .05),
+    0 26px 56px -30px rgb(var(--tinta-950) / .34);
+  /* La retícula va en dos pesos y no en uno.
+     Estaba dibujada a dos pasos —ocho píxeles dentro de sesenta y cuatro— pero
+     con el mismo color y el mismo grosor en los dos, así que las líneas gruesas
+     no se distinguían de las finas y el conjunto salía como una malla uniforme:
+     ruido parejo de canto a canto en vez de papel de dibujo. Separadas, la fina
+     hace grano y la gruesa hace cuadrícula, que es lo que se reconoce. */
+  --p-reja: rgb(var(--tinta-950) / .04);
+  --p-reja-mayor: rgb(var(--tinta-950) / .105);
+  --p-guia: rgb(var(--minio-600) / .22);
+
+}
+
+.oscuro {
+  color-scheme: dark;
+
+  /* Rampa de Linear en oscuro: negro que no llega a negro. */
+  /* La misma pizarra llevada casi al negro: los dos temas tienen que
+     reconocerse como el mismo producto, no como dos aplicaciones. */
+  --hueso: 9 12 20;
+  --hueso-alto: 17 22 34;
+  --hueso-bajo: 13 17 27;
+  --hueso-mesa: 26 33 48;
+
+  /* En oscuro el filete se queda: sin él, dos superficies translúcidas
+     contiguas no tienen dónde terminar. */
+  --pieza-fondo: rgba(226, 233, 245, .05);
+  --pieza-borde: rgba(226, 233, 245, .09);
+
+  --tinta-950: 240 244 250;
+  --tinta-900: 221 228 239;
+  --tinta-700: 176 187 205;
+  --tinta-500: 133 145 166;
+  --tinta-400: 116 128 148;
+  --tinta-300: 71 82 101;
+
+  --trazo-fino: rgba(226, 233, 245, .09);
+  --trazo-medio: rgba(226, 233, 245, .15);
+  --trazo-grueso: rgba(226, 233, 245, .26);
+
+  --vidrio-hondo: rgba(226, 233, 245, .035);
+  --vidrio: rgba(226, 233, 245, .05);
+  --vidrio-alto: rgba(226, 233, 245, .08);
+  --vidrio-tope: rgba(226, 233, 245, .13);
+
+  /* Subidos de luminosidad y bajados de croma: sobre negro, el color puro
+     vibra. */
+  /* Subidos de luz y bajados de croma: sobre negro, el cobalto puro vibra. */
+  /* Subidos de luz y bajados de croma: sobre negro, el ladrillo puro se apaga
+     y se confunde con el fondo. */
+  --minio-700: 146 186 250;
+  --minio-600: 122 170 248;
+  --minio-500: 100 156 246;
+  --minio-100: 18 34 60;
+
+  --cian-900: 196 226 248;
+  --cian-700: 166 210 245;
+  --cian-500: 136 194 240;
+  --cian-100: 16 34 52;
+
+  --viable: 122 170 248;
+  --tenso: 150 168 190;
+  --riesgo: 240 110 120;
+
+  /* En oscuro la rampa se invierte: avanzar es aclararse. */
+  /* En oscuro la rampa se invierte: avanzar es aclararse. */
+  --etapa-factibilidad: #234066;
+  --etapa-diseno: #2F5C90;
+  --etapa-permisos: #3D7CBC;
+  --etapa-obra: #559BD8;
+  --etapa-preventa: #86BEEA;
+  --etapa-entregado: #C8E3F7;
+
+  /* El canto de luz sólo existe en oscuro: es el bisel del vidrio. */
+  --canto: rgba(226, 233, 245, .08);
+  --sombra-pieza: 0 1px 3px rgba(0, 0, 0, .4), 0 10px 30px -16px rgba(0, 0, 0, .7);
+  --sombra-media: 0 2px 6px rgba(0, 0, 0, .45), 0 20px 48px -20px rgba(0, 0, 0, .8);
+  --sombra-flota: 0 6px 14px rgba(0, 0, 0, .5), 0 30px 64px -24px rgba(0, 0, 0, .85);
+
+  --halo-1: rgba(100, 156, 246, .12);
+  --halo-2: rgba(136, 194, 240, .08);
+  --halo-3: rgba(226, 233, 245, .045);
+  --reja-fina:   rgba(226, 233, 245, .035);
+  --reja-gruesa: rgba(226, 233, 245, .06);
+
+  --barra: rgba(226, 233, 245, .17);
+  --barra-viva: rgba(226, 233, 245, .28);
+
+  --panel-fondo:
+    radial-gradient(38rem 24rem at 88% -10%, rgba(100, 156, 246, .28), transparent 64%),
+    radial-gradient(30rem 20rem at 10% 120%, rgba(136, 194, 240, .14), transparent 60%),
+    linear-gradient(152deg, rgb(20 27 44), rgb(9 12 20));
+  --panel-tinta: #EEF4FF;
+
+  --matriz-letra: #6E9CF6;
+  --matriz-aura:  #25406E;
+  --matriz-campo: #182234;
+  --matriz-grano: #566078;
+
+  /* En oscuro el cristal es lo contrario: no una lámina que aclara lo de
+     detrás, sino una que lo empaña. El canto de luz sube y la sombra interior
+     se hace negra. */
+  --cristal-fondo: linear-gradient(152deg, rgba(226,233,245,.11), rgba(226,233,245,.035));
+  --cristal-borde: rgba(226, 233, 245, .15);
+  --cristal-luz:
+    inset 0 1px 0 rgba(226, 233, 245, .18),
+    inset 0 -1px 0 rgba(0, 0, 0, .35);
+  --cristal-brillo: linear-gradient(118deg, rgba(226,233,245,.16) 0%, rgba(226,233,245,0) 42%);
+
+  --sombra-3d:
+    0 2px 6px rgba(0, 0, 0, .5),
+    0 18px 34px -12px rgba(0, 0, 0, .62),
+    0 56px 88px -36px rgba(0, 0, 0, .9);
+  --sombra-3d-viva:
+    0 3px 8px rgba(0, 0, 0, .55),
+    0 26px 48px -14px rgba(0, 0, 0, .7),
+    0 78px 120px -40px rgba(0, 0, 0, .95);
+
+  /* Sobre negro los focos suben de luz: un naranja oscuro desenfocado sobre
+     fondo oscuro no ilumina, ensucia. */
+  --aurora-1: #2E7BF6;
+  --aurora-2: #7FC4F0;
+  --aurora-3: #0F3C86;
+  --aurora-4: #16233C;
+  --aurora-opacidad: .16;
+
+  /* La portada en oscuro. Sigue derivando de las plantas del panel, así que
+     sólo se redefine lo que en oscuro no puede ser una fórmula: la retícula y
+     las sombras, que sobre fondo oscuro necesitan otro punto de partida. */
+  /* En oscuro la rampa del azul va al revés —el 700 es el más claro— así que
+     el hondo no puede salir de ella. Va escrito: un azul de noche que se separa
+     del fondo casi negro y queda claramente por debajo de la cara. */
+  --p-acento-hondo: rgb(28 58 122);
+  /* La marca no cambia. Se repite para que el bloque se lea entero de una vez
+     y nadie la retoque por tema sin darse cuenta. */
+  --p-marca-fondo: rgb(28 58 110);
+  --p-marca-tinta: #fff;
+  --p-reja: rgb(var(--tinta-950) / .045);
+  --p-reja-mayor: rgb(var(--tinta-950) / .1);
+  --p-sombra: 0 2px 6px rgba(0, 0, 0, .5), 0 34px 70px -34px rgba(0, 0, 0, .82);
+
+}
+
+@layer base {
+  html, body { height: 100%; }
+
+  body {
+    @apply bg-hueso text-tinta-900 font-sans text-cuerpo font-libro antialiased;
+    /* El cambio de tema se cruza en 180 ms en vez de dar un salto seco. */
+    transition: background-color .18s ease, color .18s ease;
+  }
+
+  /**
+   * Halo de fondo.
+   *
+   * El vidrio necesita algo que refractar. Sobre un fondo plano, una capa
+   * translúcida con desenfoque no se distingue de una opaca: no hay nada
+   * detrás que se deforme. Estas dos manchas muy tenues son lo que hace que
+   * las piezas parezcan tener espesor. Van fijas: ni se mueven al desplazar,
+   * ni cuestan repintado.
+   */
+  /* Las tres manchas de color se van. Un lavado azul cruzando el fondo de
+     cada pantalla es lo que más delata una plantilla: no lo pide ningún dato,
+     tiñe todas las piezas que tiene encima y en una herramienta que se mira
+     ocho horas cansa. Lo que queda es papel milimetrado —retícula fina de
+     veinticuatro píxeles dentro de la gruesa de ciento veinte— que es lo que
+     un promotor tiene delante todo el día, y una sola mancha neutra muy tenue
+     para que las piezas conserven su espesor.
+
+     La máscara apaga la retícula hacia abajo: llegando entera hasta el pie
+     compite con las tablas, y al lado de una columna de cifras una cuadrícula
+     a plena intensidad se lee como una segunda tabla. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      linear-gradient(var(--reja-fina) 1px, transparent 1px),
+      linear-gradient(90deg, var(--reja-fina) 1px, transparent 1px),
+      linear-gradient(var(--reja-gruesa) 1px, transparent 1px),
+      linear-gradient(90deg, var(--reja-gruesa) 1px, transparent 1px);
+    background-size: 24px 24px, 24px 24px, 120px 120px, 120px 120px;
+    mask-image: linear-gradient(180deg, #000 0%, #000 22%, transparent 68%);
+    -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 22%, transparent 68%);
+  }
+
+  /* La mancha neutra: sin color, sólo un punto de luz arriba que da espesor a
+     lo que se apoya encima. */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(70rem 34rem at 50% -12%, var(--halo-3), transparent 66%);
+  }
+
+  /* Cifras alineadas en columna. En una cartera se comparan verticalmente:
+     sin esto, un 1 y un 8 ocupan distinto y la columna baila. */
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--barra); border-radius: 6px;
+    border: 3px solid transparent; background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--barra-viva); background-clip: content-box; }
+
+  ::selection { background: rgb(var(--minio-600) / .30); color: rgb(var(--tinta-950)); }
+
+  :focus-visible { outline: 2px solid rgb(var(--cian-500)); outline-offset: 2px; }
+}
+
+@layer components {
+  /**
+   * Pieza: el contenedor base.
+   *
+   * Es vidrio, no papel: fondo translúcido, desenfoque de lo que hay detrás y
+   * dos sombras. La interior es el brillo del canto superior —lo que en el
+   * vidrio real hace el bisel— y sólo existe en oscuro; en claro `--canto` es
+   * transparente, porque un brillo blanco sobre blanco no dice nada.
+   */
+  .pieza {
+    @apply rounded-caja border;
+    background: var(--pieza-fondo);
+    border-color: var(--pieza-borde);
+    border-width: var(--lamina-filete);
+    box-shadow: var(--lamina-canto), var(--lamina-sombra);
+    transition: box-shadow .25s ease, transform .25s ease, background-color .25s ease;
+  }
+
+  /* La pieza que se levanta al pasar por encima. La sombra hace casi todo el
+     trabajo: sube dos pasos de difusión y la tarjeta parece despegarse, sin
+     que ningún borde cambie de color. */
+  .pieza-viva:hover { box-shadow: var(--lamina-canto), var(--lamina-sombra-viva); }
+
+  /**
+   * El rótulo.
+   *
+   * `font-display` es una utilidad de Tailwind y sólo pone la familia; aquí se
+   * le añade lo que hace que un tipo se comporte como tipo de rótulo, y eso no
+   * es lo mismo en cada familia. Por eso hay un bloque por juego y no uno solo.
+   *
+   * De casa —Geist— el apretado va a −0,035 em y el peso a 620. Los dos juntos
+   * y por el mismo motivo: la caja es algo estrecha y los terminales están
+   * cortados en horizontal, así que a cuerpo de titular las palabras se abren
+   * si no se cierra el interletraje, y los finos se adelgazan si el peso se
+   * queda en el semibold de una grotesca corriente.
+   *
+   * El apretado de una grotesca no vale para un serif: en «Documento» los
+   * remates ya separan las letras, y cerrar tanto como en Geist las junta hasta
+   * tocarse. El peso tampoco — Plex Serif sólo tiene 400, 500 y 600, de modo
+   * que pedir 620 lo redondea a 600 y conviene decirlo en vez de dejarlo al
+   * azar.
+   *
+   * `opsz` es el eje óptico y sólo lo entiende Fraunces, en «Editorial»: a 96
+   * el dibujo engorda los gruesos y afila los remates, que es lo que un tipo
+   * hace de verdad al crecer de cuerpo. En las demás familias es inocuo y se
+   * deja puesto para no repetir la declaración cuatro veces.
+   */
+  .font-display {
+    font-variation-settings: "opsz" 96;
+    /* Anton sólo tiene el 400. Pedirle más hace que el navegador lo engorde
+       por su cuenta y el dibujo —que ya es muy negro— se cierra; `font-synthesis`
+       lo prohíbe explícitamente por si algún navegador insiste. */
+    font-weight: 400;
+    font-synthesis: none;
+    /* Una ultracondensada ya viene apretada de fábrica: cerrarla otro tres por
+       ciento pega las astas. */
+    letter-spacing: -0.005em;
+    /* Los rótulos parten por sílaba antes de dejar una palabra suelta en la
+       última línea, que es el defecto que más delata una portada sin repasar. */
+    text-wrap: balance;
+  }
+  [data-letra="cartel"] .font-display {
+    font-weight: 700;
+    font-synthesis: weight;
+    letter-spacing: -0.02em;
+  }
+  [data-letra="documento"] .font-display {
+    font-weight: 600;
+    font-synthesis: weight;
+    letter-spacing: -0.012em;
+  }
+
+  [data-letra="editorial"] .font-display {
+    font-weight: 600;
+    font-synthesis: weight;
+    letter-spacing: -0.018em;
+  }
+  [data-letra="grotesca"] .font-display {
+    font-weight: 620;
+    font-synthesis: weight;
+    letter-spacing: -0.03em;
+  }
+
+  /**
+   * Lámina.
+   *
+   * El panel opaco de la portada. Es lo que sustituye al cristal en las
+   * secciones que llevan texto: con la trama a plena intensidad por detrás de
+   * toda la página, una superficie translúcida deja pasar el mosaico y el texto
+   * se lee a medias — y encima el desenfoque no ayuda, porque desenfocar un
+   * mosaico de celdas duras produce manchas, no un fondo liso.
+   *
+   * Opaca, el reparto queda limpio: la trama es la protagonista en los huecos
+   * entre láminas, y dentro de cada lámina manda el texto. El cristal se queda
+   * para el panel de la aplicación, donde lo que hay detrás es fondo liso.
+   */
+  .lamina {
+    background: rgb(var(--hueso-alto));
+    border: var(--lamina-filete) solid var(--trazo-fino);
+    box-shadow: var(--lamina-sombra);
+    transition: box-shadow .4s cubic-bezier(.16,1,.3,1), transform .4s cubic-bezier(.16,1,.3,1);
+  }
+  .lamina-viva:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--sombra-3d-viva);
+  }
+
+  /**
+   * La cifra.
+   *
+   * Las cifras grandes pasan al serif de titular. En la sans se leían como un
+   * dato más de la interfaz; en Fraunces a 700 son lo que son en esta
+   * herramienta — la conclusión de la pantalla. El eje óptico va a 120, que a
+   * estos cuerpos engorda los gruesos y estira los remates.
+   *
+   * Sólo para cifras sueltas y grandes, nunca para columnas. El corte de
+   * Fraunces que hay en `public/fonts` no trae `tnum`, así que sus dígitos son
+   * proporcionales —un `1` es un tercio más estrecho que un `0`— y en una
+   * columna de dieciocho la cifra bailaría. Las tablas y las fichas de la
+   * rejilla se quedan en la sans, que sí lo trae.
+   */
+  /**
+   * La cifra.
+   *
+   * Va en la sans y no en la del rótulo, que es lo contrario de lo que hacía
+   * antes. El motivo es el oficio: un importe se lee mejor en una grotesca de
+   * dígitos anchos que en un serif, por bueno que sea el serif — los remates
+   * añaden ruido justo donde hay que distinguir un 3 de un 8 a un metro. En un
+   * balance impreso los rótulos van en serif y las columnas en otra cosa, y
+   * ésta es exactamente esa distinción.
+   *
+   * Lo que sí conserva es el peso alto y el apretado corto: una cifra tiene
+   * menos signos que una frase, así que necesita más negro para pesar igual, y
+   * sus dígitos —todos de la misma anchura— no se deshilachan al cerrarlos.
+   */
+  .cifra {
+    font-family: var(--fuente-sans), "Plus Jakarta Sans", Geist, system-ui, sans-serif;
+    font-variation-settings: "opsz" 120;
+    font-weight: 680;
+    letter-spacing: -0.04em;
+    /* Cifras de caja alta y de ancho fijo. Lo segundo es lo que importa: una
+       columna de dieciocho importes deja de bailar. */
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  /* Plex Sans llega antes al negro y tiene la caja más ancha: con el peso y el
+     apretado de Geist la cifra se emborrona. */
+  [data-letra="documento"] .cifra { font-weight: 600; letter-spacing: -0.03em; }
+
+  /**
+   * Caja de fondo.
+   *
+   * El bloque de color que se asoma por detrás de una pieza. No es sombra ni
+   * marco: es una segunda superficie desplazada, la operación que hace que una
+   * tarjeta parezca colocada sobre algo en vez de flotar sobre el papel.
+   *
+   * Se pone en un envoltorio, no en la propia pieza. Con `z-index: -1` sobre la
+   * pieza no funciona: en cuanto la pieza crea contexto de apilado —y lo crea,
+   * porque `framer-motion` le anima `transform` y `opacity`— un hijo negativo
+   * pasa a pintarse por encima del fondo de su padre, y la caja aparecía
+   * tapando la tarjeta en vez de asomando por detrás. En un envoltorio sin
+   * fondo el orden es natural: la caja en 0, el contenido en 1.
+   */
+  .caja-tras { position: relative; }
+  .caja-tras > * { position: relative; z-index: 1; }
+  .caja-tras::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: var(--caja-tras-radio, 1.75rem);
+    background: rgb(var(--minio-500) / .16);
+    transform: translate(14px, 14px);
+    transition: transform .4s cubic-bezier(.16,1,.3,1);
+  }
+  /* Al pasar por encima, la caja se retira bajo la pieza: la profundidad se
+     enseña al tocarla, no todo el rato. */
+  .caja-tras:hover::before { transform: translate(7px, 7px); }
+
+  /* La variante en azul, para lo que ya es acento. */
+  .caja-tras-azul::before { background: rgb(var(--cian-500) / .26); }
+
+  /* Rotulación de plano: versalitas espaciadas. Etiqueta lo que hay debajo sin
+     robarle jerarquía, que es justo lo que hace un plano con sus leyendas. */
+  /* El rótulo de plano sube a semibold: en versalitas espaciadas y a 10 px, el
+   500 de la mono se deshacía contra el fondo. */
+  .nota { @apply font-mono text-nota font-semibold uppercase text-tinta-500; }
+
+  /* Bloque de rótulo: la banda de cabecera de una pieza, con su filete. */
+  .rotulo-bloque {
+    @apply flex items-center justify-between gap-3 border-b border-trazo-fino
+           px-4 py-2.5;
+  }
+
+  .campo {
+    @apply h-10 rounded-control border border-trazo-fino bg-vidrio-hondo px-4 text-cuerpo
+           text-tinta-950 outline-none transition placeholder:text-tinta-400
+           hover:border-trazo-medio focus:border-cian-500 focus:bg-vidrio
+           focus:ring-2 focus:ring-cian-500/20;
+  }
+
+  /* Campo recto: el mismo control, pero de canto vivo y borde firme, para
+     las pantallas que se leen como ficha de expediente (la entrada) en vez
+     de como lámina de vidrio. El foco marca el canto entero, no un halo. */
+  .campo-recto {
+    @apply border border-trazo-medio bg-hueso px-3.5 text-cuerpo
+           text-tinta-950 outline-none transition placeholder:text-tinta-400
+           hover:border-tinta-300 focus:border-cian-500
+           focus:ring-2 focus:ring-cian-500/15;
+  }
+
+  /**
+   * Botón.
+   *
+   * Era una pastilla de vidrio de 40 px con desenfoque de fondo. Se queda en la
+   * misma medida y el mismo canto que la primitiva `Boton` de `components/ui`,
+   * y por un motivo concreto: mientras las dos convivan —treinta y un sitios
+   * siguen escritos contra esta clase— dos botones contiguos en la misma barra
+   * tienen que ser el mismo botón. Con la pastilla, uno salía redondo y de
+   * vidrio y el de al lado recto y de papel.
+   *
+   * Se va también el `backdrop-blur-xl`: detrás de un botón de barra no hay
+   * nada que desenfocar, y el filtro obliga al navegador a componer una capa
+   * aparte por cada uno.
+   *
+   * A medida que las pantallas pasen a la primitiva, esta clase se queda sin
+   * usos y se cae entera.
+   */
+  .boton {
+    @apply inline-flex h-9 items-center gap-2 rounded-[9px] border border-trazo-medio
+           bg-hueso-alto px-3.5 text-[14px] font-medio text-tinta-900 transition
+           hover:border-trazo-grueso hover:bg-hueso-mesa hover:text-tinta-950
+           disabled:pointer-events-none disabled:opacity-45;
+  }
+  /* El sólido: máximo contraste contra el fondo, sea cual sea el tema. */
+  .boton-tinta  { @apply border-transparent bg-tinta-950 text-hueso hover:bg-tinta-900 hover:text-hueso; }
+  .boton-minio  { @apply border-transparent bg-minio-600 text-white hover:bg-minio-500; }
+
+  /* Marbete: la etiqueta de estado, en pastilla y en sans — en una ficha con
+     dos marbetes seguidos, el mono en caja alta pesaba más que el nombre del
+     proyecto que tenía encima. */
+  .marbete {
+    @apply inline-flex items-center gap-1.5 rounded-full border px-3 py-1
+           text-[12.5px] font-medio;
+  }
+
+  /**
+   * El deslizador de la portada.
+   *
+   * El control nativo no admite pintar el recorrido por delante del pulgar, así
+   * que el relleno lo pone el propio fondo del elemento —que se calcula en el
+   * componente según el valor— y aquí sólo se apaga el dibujo del navegador y
+   * se compone el pulgar.
+   */
+  .deslizador {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    border-radius: 999px;
+    outline: none;
+    cursor: pointer;
+  }
+  .deslizador::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    background: #fff;
+    border: 3px solid #2B7FFF;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .5);
+  }
+  .deslizador::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border: 3px solid #2B7FFF;
+    border-radius: 999px;
+    background: #fff;
+  }
+
+  /* ---- La portada -------------------------------------------------------
+     Tres clases sueltas para lo que un `style` en línea no alcanza: el estado
+     de reposo lo pone el componente, y aquí van los estados —pasar por
+     encima— que necesitan un selector. */
+
+  /* El enlace de la banda y del pie: sube a texto pleno al pasar. */
+  .enlace-portada:hover { color: var(--p-texto); }
+
+  /**
+   * El rótulo de la portada.
+   *
+   * Deja el serif y pasa a la letra del panel.
+   *
+   * El serif azul se probó porque enseña carácter, y en una hoja de dibujo no
+   * desentonaba. Lo que sí desentona es dentro del producto: quien entra desde
+   * la portada se encuentra un rótulo de otra familia en la pantalla siguiente,
+   * y ese salto se lee como dos sitios distintos. Además, un tipo de alta
+   * modulación es lo contrario del registro que pide una herramienta de
+   * números — un balance no se compone en serif de exhibición.
+   *
+   * Lo que hace de rótulo entonces es lo mismo que en una portada de cuentas:
+   * cuerpo grande, apretado corto y cifras de ancho fijo. `tnum` está aquí y no
+   * sólo en `.cifra` porque los titulares de esta página llevan cantidades
+   * dentro, y un millón escrito con dígitos proporcionales al lado de una
+   * palabra baila.
+   *
+   * Sigue el eje de letra como todo lo demás, así que quien elija «Documento»
+   * o «Editorial» recupera el serif en las dos partes a la vez —portada y
+   * panel—, que es como debía ser.
+   */
+  .portada-rotulo {
+    font-family: var(--fuente-display), Anton, "Space Grotesk", system-ui, sans-serif;
+    font-variation-settings: "opsz" 120;
+    font-weight: 400;
+    font-synthesis: none;
+    letter-spacing: -0.005em;
+    font-variant-numeric: lining-nums tabular-nums;
+    color: var(--p-texto);
+    text-wrap: balance;
+  }
+  [data-letra="cartel"] .portada-rotulo { font-weight: 700; font-synthesis: weight; letter-spacing: -0.02em; }
+  [data-letra="documento"] .portada-rotulo { font-weight: 600; font-synthesis: weight; letter-spacing: -0.012em; }
+  [data-letra="editorial"] .portada-rotulo { font-weight: 500; font-synthesis: weight; letter-spacing: -0.015em; }
+  /* Geist y Archivo cierran más que Space Grotesk: tienen la caja estrecha y
+     los terminales cortados en horizontal, de modo que a cuerpo de titular las
+     palabras se abren si no se aprieta. Space Grotesk ya viene ancha de
+     contraforma y con ese apretado las letras se tocan. */
+  [data-letra="grotesca"] .portada-rotulo { font-weight: 620; font-synthesis: weight; letter-spacing: -0.03em; }
+
+  /**
+   * El rótulo en relieve.
+   *
+   * La marca en azul con un bloque del mismo azul, más hondo, saliendo hacia
+   * abajo y a la derecha. No es una sombra: es el canto de una letra de bulto,
+   * y por eso va sin difuminar y en un tono de la misma familia — una sombra
+   * gris la dejaría flotando sobre el papel, y lo que se busca es que parezca
+   * cortada en él.
+   *
+   * Son dieciocho copias del glifo desplazadas de cinco en cinco milésimas de
+   * eme, o sea nueve centésimas de canto.
+   * En `em` y no en píxeles porque el rótulo va con `clamp`: a trece rem el
+   * canto mide diecinueve píxeles y a cuatro y medio mide seis, que es la
+   * proporción correcta en las dos puntas. Con un valor fijo, en el teléfono el
+   * relieve se comía la palabra.
+   *
+   * El canto empezó en dieciséis centésimas y era demasiado: a ese fondo las
+   * letras se tocaban entre sí y la palabra se leía como una mancha. Nueve deja
+   * ver el bulto y mantiene los blancos internos abiertos.
+   *
+   * El paso es corto a propósito: a doce milésimas se veían los escalones
+   * dentro de la contraforma de la «R» y de la «A», donde el blanco es
+   * estrecho. A cinco, cada copia solapa la anterior y el canto sale macizo.
+   */
+  .rotulo-relieve {
+    color: var(--p-acento);
+    text-shadow:
+      0.005em 0.005em 0 var(--p-acento-hondo),
+      0.010em 0.010em 0 var(--p-acento-hondo),
+      0.015em 0.015em 0 var(--p-acento-hondo),
+      0.020em 0.020em 0 var(--p-acento-hondo),
+      0.025em 0.025em 0 var(--p-acento-hondo),
+      0.030em 0.030em 0 var(--p-acento-hondo),
+      0.035em 0.035em 0 var(--p-acento-hondo),
+      0.040em 0.040em 0 var(--p-acento-hondo),
+      0.045em 0.045em 0 var(--p-acento-hondo),
+      0.050em 0.050em 0 var(--p-acento-hondo),
+      0.055em 0.055em 0 var(--p-acento-hondo),
+      0.060em 0.060em 0 var(--p-acento-hondo),
+      0.065em 0.065em 0 var(--p-acento-hondo),
+      0.070em 0.070em 0 var(--p-acento-hondo),
+      0.075em 0.075em 0 var(--p-acento-hondo),
+      0.080em 0.080em 0 var(--p-acento-hondo),
+      0.085em 0.085em 0 var(--p-acento-hondo),
+      0.090em 0.090em 0 var(--p-acento-hondo);
+  }
+
+  /**
+   * La marca.
+   *
+   * La palabra en azul, en serif y con su canto. Va en serif y no en la
+   * condensada del resto de rótulos porque es una firma y no un grito: el
+   * relieve pone el peso, así que la letra puede permitirse modulación.
+   *
+   * Estuvo un rato como placa —blanco sobre un bloque azul de noche— y el
+   * bloque resolvía el peso pero se comía la letra: a tamaño de banda el
+   * rectángulo pesaba más que la palabra que había dentro. Con el canto, la
+   * marca es la propia palabra a cualquier tamaño.
+   *
+   * Todo va en `em`, así que un solo trozo de marcado sirve para la primera
+   * pantalla y para la banda: a siete rem y medio el canto mide veinticuatro
+   * píxeles y a diecisiete mide uno, que es justo la doble impresión que hace
+   * falta ahí. Con un valor en píxeles habría que escribir dos clases.
+   *
+   * El interletraje se cierra un poco porque el serif de Plex viene abierto
+   * para texto corrido, y un logotipo se compone más apretado que un párrafo.
+   */
+  .marca {
+    display: inline-block;
+    font-family: var(--fuente-marca), "IBM Plex Serif", Georgia, serif;
+    font-weight: 600;
+    font-synthesis: none;
+    letter-spacing: -0.012em;
+    line-height: 1;
+    color: var(--p-acento);
+    /* Once copias del glifo, de cinco en cinco milésimas de eme. Es la mitad
+       de fondo que llevaba la condensada: un serif tiene los finos mucho más
+       delgados, y con nueve centésimas de canto los remates se tragaban el
+       trazo y la palabra salía como un borrón.
+
+       El fondo va multiplicado por `--pf-canto`, que vale 1 en todas partes y
+       sólo la marca de la primera pantalla lo mueve de 0 a 1 al cargar. Así el
+       relieve se puede levantar sin escribir dos juegos de sombras. */
+    text-shadow:
+      calc(0.005em * 1 * var(--pf-canto)) calc(0.005em * 1 * var(--pf-canto)) 0 var(--p-acento-hondo),
+      calc(0.005em * 2 * var(--pf-canto)) calc(0.005em * 2 * var(--pf-canto)) 0 var(--p-acento-hondo),
+      calc(0.005em * 3 * var(--pf-canto)) calc(0.005em * 3 * var(--pf-canto)) 0 var(--p-acento-hondo),
+      calc(0.005em * 4 * var(--pf-canto)) calc(0.005em * 4 * var(--pf-canto)) 0 var(--p-acento-hondo),
+      calc(0.005em * 5 * var(--pf-canto)) calc(0.005em * 5 * var(--pf-canto)) 0 var(--p-acento-hondo),
+      calc(0.005em * 6 * var(--pf-canto)) calc(0.005em * 6 * var(--pf-canto)) 0 var(--p-acento-hondo),
+      calc(0.005em * 7 * var(--pf-canto)) calc(0.005em * 7 * var(--pf-canto)) 0 var(--p-acento-hondo),
+      calc(0.005em * 8 * var(--pf-canto)) calc(0.005em * 8 * var(--pf-canto)) 0 var(--p-acento-hondo),
+      calc(0.005em * 9 * var(--pf-canto)) calc(0.005em * 9 * var(--pf-canto)) 0 var(--p-acento-hondo),
+      calc(0.005em * 10 * var(--pf-canto)) calc(0.005em * 10 * var(--pf-canto)) 0 var(--p-acento-hondo),
+      calc(0.005em * 11 * var(--pf-canto)) calc(0.005em * 11 * var(--pf-canto)) 0 var(--p-acento-hondo);
+  }
+
+  /**
+   * La marca.
+   *
+   * La palabra en azul, en serif y con su canto. Va en serif y no en la
+   * condensada del resto de rótulos porque es una firma y no un grito: el
+   * relieve pone el peso, así que la letra puede permitirse modulación.
+   *
+   * Estuvo un rato como placa —blanco sobre un bloque azul de noche— y el
+   * bloque resolvía el peso pero se comía la letra: a tamaño de banda el
+   * rectángulo pesaba más que la palabra que había dentro. Con el canto, la
+   * marca es la propia palabra a cualquier tamaño.
+   *
+   * Todo va en `em`, así que un solo trozo de marcado sirve para la primera
+   * pantalla y para la banda: a siete rem y medio el canto mide veinticuatro
+   * píxeles y a diecisiete mide uno, que es justo la doble impresión que hace
+   * falta ahí. Con un valor en píxeles habría que escribir dos clases.
+   *
+   * El interletraje se cierra un poco porque el serif de Plex viene abierto
+   * para texto corrido, y un logotipo se compone más apretado que un párrafo.
+   */
+  /**
+   * El relieve, a tamaño de banda.
+   *
+   * El mismo objeto que el rótulo de portada, reducido. A veintidós píxeles las
+   * dieciocho copias de la versión grande caen todas dentro del mismo píxel y
+   * no se ve nada, así que aquí es una sola copia a cuarenta y cinco milésimas
+   * —un píxel justo— que se lee como una doble impresión mal registrada. Es lo
+   * mínimo que hace falta para que la marca de la banda y la de la primera
+   * pantalla se reconozcan como la misma pieza.
+   */
+  .rotulo-relieve-min {
+    color: var(--p-acento);
+    text-shadow: 0.045em 0.045em 0 var(--p-acento-hondo);
+  }
+
+  /**
+   * El renglón del rótulo que va en acento.
+   *
+   * El titular entero en color era demasiado: a cuatro rem y en el azul de
+   * marca, la primera pantalla no tenía dónde descansar. Con una sola línea
+   * teñida el color sigue estando —y sigue diciendo cuál es la marca— pero el
+   * peso lo lleva la tinta, que es lo que aguanta leerse.
+   */
+  .portada-rotulo .acento { color: var(--p-acento); }
+
+  /* El interruptor de tema, con los tonos de la portada en vez de los del
+     panel: dentro de la landing el gris de la interfaz se pierde. */
+  .tema-portada {
+    color: var(--p-suave);
+    transition: color .2s ease, background-color .2s ease;
+  }
+  .tema-portada:hover {
+    color: var(--p-texto);
+    background: var(--p-acento-tenue);
+  }
+
+  /* La ficha de capacidad: se levanta y enciende su canto. Va en CSS y no en
+     framer-motion porque son cuatro fichas y un `whileHover` por cada una
+     monta cuatro animaciones vivas para un gesto que la GPU resuelve sola. */
+  .ficha-portada {
+    transition: transform .35s cubic-bezier(.16,1,.3,1),
+                border-color .35s ease, box-shadow .35s ease;
+  }
+  .ficha-portada:hover {
+    transform: translateY(-3px);
+    border-color: var(--p-borde-vivo) !important;
+    box-shadow: var(--p-sombra);
+  }
+
+  /* Filete de sección: la línea con la que un plano separa dos zonas. */
+  .filete { @apply border-t border-trazo-medio; }
+
+  /**
+   * Cristal líquido.
+   *
+   * Cuatro capas hacen el efecto y ninguna sobra:
+   *   fondo en degradado  — el grosor aparente de la lámina;
+   *   `backdrop-filter`   — lo que hay detrás, desenfocado y más saturado;
+   *   `--cristal-luz`     — canto superior encendido, canto inferior en sombra;
+   *   `::before`          — el reflejo especular en diagonal.
+   *
+   * El reflejo va en pseudoelemento y no en el degradado del fondo porque el
+   * fondo lo pintan también las piezas de color: si el brillo estuviera dentro,
+   * una tarjeta teñida perdería el reflejo al cambiarle el fondo.
+   */
+  .cristal {
+    position: relative;
+    background: var(--cristal-fondo);
+    border: 1px solid var(--cristal-borde);
+    backdrop-filter: blur(26px) saturate(180%);
+    -webkit-backdrop-filter: blur(26px) saturate(180%);
+    box-shadow: var(--cristal-luz), var(--sombra-3d);
+    transition: box-shadow .4s cubic-bezier(.16,1,.3,1), transform .4s cubic-bezier(.16,1,.3,1);
+  }
+  .cristal::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: var(--cristal-brillo);
+  }
+  /* El contenido tiene que quedar por encima del reflejo. */
+  .cristal > * { position: relative; z-index: 1; }
+
+  /* El cristal que se levanta. Sube la sombra entera, no sólo la difusa: si
+     sólo crece la de fuera, la pieza parece hincharse en vez de despegar. */
+  .cristal-vivo:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--cristal-luz), var(--sombra-3d-viva);
+  }
+
+  /* Sombra de tres capas suelta, para lo que no es cristal. */
+  .relieve { box-shadow: var(--sombra-3d); }
+
+  /**
+   * Sección.
+   *
+   * El contenedor de una región del panel: la tabla de hitos, el bloque de
+   * ajustes, el cuadro de un gráfico. Hasta ahora todas usaban `.cristal`, y ahí
+   * el cristal estaba de más por tres motivos.
+   *
+   * Uno de rendimiento: `backdrop-filter: blur(26px) saturate(180%)` obliga al
+   * navegador a componer y desenfocar todo lo que hay debajo, y Configuración
+   * llevaba seis de esos apilados en una sola pantalla. Detrás de ellos no hay
+   * nada que desenfocar —fondo liso— así que se pagaba el desenfoque de un
+   * fondo plano.
+   *
+   * Otro de dibujo: la sombra de tres capas —contacto, cuerpo y difusa— sirve
+   * para levantar una pieza suelta del papel. Repetida en cada región de cada
+   * pantalla no levanta nada: iguala todo a la misma altura y deja la pantalla
+   * sin jerarquía, que es justo lo contrario de para lo que existe una sombra.
+   *
+   * Y uno de coherencia: el consolidado de cartera ya se había rehecho en papel
+   * con filete, así que la pantalla principal y las otras siete no se parecían.
+   *
+   * Lo que queda es filete de un píxel y superficie. La elevación se reserva
+   * para lo que de verdad flota —desplegables, diálogos y avisos— y el cristal,
+   * para las tres pastillas de portada que van sobre imagen, donde hay algo
+   * detrás que refractar.
+   */
+  .seccion {
+    background: rgb(var(--hueso-alto));
+    border: var(--lamina-filete) solid var(--trazo-fino);
+    box-shadow: var(--lamina-sombra);
+  }
+  /* La sección que responde al puntero: sólo para la que además es un enlace. */
+  .seccion-viva { transition: border-color .2s ease, box-shadow .2s ease; }
+  .seccion-viva:hover { border-color: var(--trazo-medio); box-shadow: var(--lamina-sombra-viva); }
+
+  /**
+   * Panel oscuro.
+   *
+   * La pieza que rompe la página. Una pantalla entera de tarjetas claras sobre
+   * crema es agradable y plana: nada dice cuál es la cifra que importa. Un solo
+   * bloque en tinta invierte el contraste y se lleva la mirada antes que
+   * cualquier titular — y funciona precisamente porque es uno.
+   *
+   * Dentro, todo se invierte: el texto va en papel, los filetes en papel muy
+   * diluido, y el acento sube de luminosidad porque el terracota de la versión
+   * clara desaparece contra el espresso.
+   */
+  .panel-oscuro {
+    position: relative;
+    overflow: hidden;
+    background: var(--panel-fondo);
+    /* Su propia tinta, no la del papel. El panel es oscuro en los dos temas,
+       así que `--hueso` sólo servía en claro: en oscuro pintaba el texto del
+       color del fondo de la página y la cifra principal desaparecía. */
+    color: var(--panel-tinta);
+    box-shadow: var(--sombra-3d);
+  }
+  /* Los tonos de dentro del panel, para no repetir el mismo rgba diez veces. */
+  .panel-oscuro .rotulo-claro { color: color-mix(in srgb, var(--panel-tinta) 64%, transparent); }
+  .panel-oscuro .filete-claro { border-color: color-mix(in srgb, var(--panel-tinta) 18%, transparent); }
+  .panel-oscuro .acento-claro { color: color-mix(in srgb, rgb(var(--minio-500)) 60%, white); }
+}
+
+@layer utilities {
+  /**
+   * Aurora.
+   *
+   * Cuatro manchas de color muy desenfocadas que derivan despacio. Es lo que
+   * el mosaico de píxeles hacía mal: aquel llenaba la pantalla de rojo y
+   * amarillo planos y se comía el titular que tenía encima. Esto pone color
+   * —que es lo que se pedía— en la capa de fondo y a baja frecuencia: no hay
+   * ni un borde duro contra el que compita una letra.
+   *
+   * Los cuatro focos van a velocidades y desfases distintos y sin `alternate`
+   * sincronizado, así que la combinación no se repite a ojo aunque cada uno
+   * tenga su ciclo.
+   */
+  @keyframes deriva-1 { 0%,100% { transform: translate3d(0,0,0)      scale(1);    }
+                        50%     { transform: translate3d(9%, 7%,0)   scale(1.18); } }
+  @keyframes deriva-2 { 0%,100% { transform: translate3d(0,0,0)      scale(1.12); }
+                        50%     { transform: translate3d(-11%,5%,0)  scale(.92);  } }
+  @keyframes deriva-3 { 0%,100% { transform: translate3d(0,0,0)      scale(.95);  }
+                        50%     { transform: translate3d(7%,-9%,0)   scale(1.22); } }
+  @keyframes deriva-4 { 0%,100% { transform: translate3d(0,0,0)      scale(1.06); }
+                        50%     { transform: translate3d(-6%,-6%,0)  scale(.88);  } }
+
+  .foco {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: var(--aurora-opacidad);
+    will-change: transform;
+  }
+  .foco-1 { animation: deriva-1 26s ease-in-out infinite; }
+  .foco-2 { animation: deriva-2 34s ease-in-out infinite; }
+  .foco-3 { animation: deriva-3 30s ease-in-out infinite; }
+  .foco-4 { animation: deriva-4 38s ease-in-out infinite; }
+
+  /**
+   * Grano.
+   *
+   * Un degradado grande y limpio en pantalla se corta en bandas: 8 bits por
+   * canal no dan para una transición de 900 px. El ruido rompe esa escalera —
+   * el mismo truco que usa el cine para que un fundido a negro no se vea a
+   * escalones — y de paso le quita a la aurora el aire de fondo de plantilla.
+   */
+  .grano::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: .32;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+  }
+
+  /**
+   * Desfile horizontal.
+   *
+   * Recorre exactamente la mitad del ancho de la tira. La tira lleva el
+   * contenido duplicado, así que al llegar a −50 % la segunda copia ocupa la
+   * posición inicial de la primera y el ciclo empalma sin costura.
+   *
+   * Va en CSS y no en JavaScript porque es perpetua: `transform` se resuelve en
+   * el compositor y no cuesta un solo fotograma del hilo principal.
+   */
+  @keyframes desfila { to { transform: translate3d(-50%, 0, 0); } }
+  .desfile { animation: desfila linear infinite; will-change: transform; }
+
+  /**
+   * Esqueleto.
+   *
+   * Un rectángulo del color del papel hundido con una banda de luz que lo
+   * recorre. La banda se mueve con `background-position` y no con `transform`
+   * sobre un hijo: así no hace falta ni un elemento más ni recorte, y el
+   * repintado se queda en el compositor.
+   *
+   * El ciclo es de 1,6 s y va con pausa al final. Un brillo continuo y rápido
+   * transmite prisa, que es lo contrario de lo que necesita quien espera.
+   */
+  @keyframes esqueleto-brillo { to { background-position: -200% 0; } }
+
+  .esqueleto {
+    background-color: var(--vidrio-hondo);
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgb(var(--hueso-alto) / .55) 50%,
+      transparent 100%);
+    background-size: 200% 100%;
+    background-repeat: no-repeat;
+    animation: esqueleto-brillo 1.6s ease-in-out infinite;
+  }
+
+  /* Quien haya pedido menos movimiento al sistema no debería ver una tira
+     desplazándose sola ni un titular saliendo de debajo de su línea. El
+     esqueleto se queda quieto pero sigue estando: la forma ya dice que hay algo
+     cargando, el brillo sólo lo adornaba. */
+  @media (prefers-reduced-motion: reduce) {
+    .desfile, .foco, .esqueleto { animation: none; }
+    *, *::before, *::after {
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Fila que se desplaza en horizontal sin enseñar barra. La banda de
+     navegación la usa en pantallas estrechas: la barra del sistema, dentro de
+     una banda de 64 px de alto, se come el filete inferior. */
+  .sin-barra { scrollbar-width: none; -ms-overflow-style: none; }
+  .sin-barra::-webkit-scrollbar { display: none; }
+
+  /* Trama de papel milimetrado, muy tenue. Da textura de mesa de trabajo sin
+     dibujar una retícula que compita con el contenido. */
+  .trama-mesa {
+    background-image:
+      linear-gradient(var(--trazo-fino) 1px, transparent 1px),
+      linear-gradient(90deg, var(--trazo-fino) 1px, transparent 1px);
+    background-size: 22px 22px;
+    background-position: -1px -1px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Puente de componentes. Mismo motivo que el de color: las páginas que aún no
+   se han rehecho piden `.card`, `.field`, `.btn`… Se reapuntan a las piezas
+   nuevas para que hereden el lenguaje sin reescribir su marcado. Desaparece
+   cuando no queden usos.
+   -------------------------------------------------------------------------- */
+@layer components {
+  .card  { @apply pieza; }
+  .field { @apply campo; }
+  .btn   { @apply boton; }
+  .btn-primary { @apply boton-minio; }
+  .btn-navy    { @apply boton-tinta; }
+  .chip  { @apply marbete; }
+  .lbl   { @apply nota; }
+}

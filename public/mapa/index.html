@@ -1,0 +1,1807 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ED Intelligence — Panama Residential Portfolio</title>
+<link rel="stylesheet" href="./node_modules/maplibre-gl/dist/maplibre-gl.css">
+<script>
+  if(location.protocol==='file:') location.replace('http://127.0.0.1:4173/');
+</script>
+<style>
+  /* ---- tokens: light is the base, dark is selected (not flipped) ---------- */
+  :root{
+    color-scheme:light;
+    --page:#f4f7fb; --surface:#ffffff; --surface-2:#f6f9fd;
+    --ink:#080c16; --ink-2:#3a465c; --ink-muted:#64728a;
+    --line:#dde5f0; --rule:#c2cddd;
+    --ring:rgba(8,12,22,.10); --shadow:0 6px 28px rgba(8,12,22,.14);
+    /* Sequential money ramp, now in value rather than hue. The panel around
+       this viewer went monochrome; a blue ramp inside a black-and-white
+       product reads as a screenshot of something else. Five steps of grey
+       still order correctly — that was the ramp's only job — and the reserved
+       accent below is the one thing that stays coloured. */
+    --m1:#bfdcf4; --m2:#8cc0e9; --m3:#4b96d4; --m4:#1c6eeb; --m5:#0e2647;
+    /* Categorical (unit status). Sold and available separate by value; the
+       reserved slot keeps the one accent the whole product allows, because a
+       stack plan has to show what is held without being read. */
+    --sold:#0e2647; --resv:#d62839; --avail:#cfe0ef;
+    --good:#1056c8;
+    --ctx-lo:#e4eaf3; --ctx-hi:#ccd6e4;      /* recessive context buildings */
+    --beacon:#1c6eeb;
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --page:#090c14; --surface:#111622; --surface-2:#0d111b;
+    --ink:#f4f8fd; --ink-2:#b4c0d1; --ink-muted:#8896aa;
+    --line:#1e2536; --rule:#2c3448;
+    --ring:rgba(255,255,255,.10); --shadow:0 6px 30px rgba(0,0,0,.55);
+    --m1:#234066; --m2:#2f5c90; --m3:#3d7cbc; --m4:#86bdea; --m5:#c8e3f7;
+    --sold:#c8e3f7; --resv:#f06e78; --avail:#33455e;
+    --good:#7aaaf8;
+    --ctx-lo:#141a27; --ctx-hi:#222b3c;
+    --beacon:#c8e3f7;
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--page); color:var(--ink);
+    font:13px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased; overflow:hidden;
+  }
+  button,input,select{font:inherit; color:inherit}
+
+  /* ---- shell: map is the page; everything else floats over it ------------ */
+  .app{position:fixed; inset:0; display:flex; flex-direction:column}
+  #map{position:absolute; inset:0; z-index:0; background:var(--surface-2)}
+
+  /* ---- toolbar: one filter row above everything it scopes ---------------- */
+  .bar{
+    position:relative; z-index:30; display:flex; align-items:center; gap:10px; row-gap:8px;
+    flex-wrap:wrap; padding:9px 14px; background:color-mix(in srgb,var(--surface) 78%,transparent);
+    backdrop-filter:blur(22px) saturate(150%); border-bottom:1px solid var(--line);
+  }
+  .ctl{white-space:nowrap}
+  .brand{display:flex; align-items:center; gap:9px; margin-right:2px}
+  .mark{width:29px;height:29px;border-radius:7px;display:grid;place-items:center;
+        background:var(--m5);color:var(--surface);font-weight:700;font-size:12px;letter-spacing:-.04em}
+  :root[data-theme="dark"] .mark{color:#0d0f10}
+  .brand h1{font-size:13px;margin:0;font-weight:600;letter-spacing:-.01em;white-space:nowrap}
+  .brand small{display:block;color:var(--ink-muted);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase}
+  .spacer{flex:1}
+  .ctl{height:32px; border:1px solid var(--line); border-radius:8px; background:var(--surface-2);
+       padding:0 10px; font-size:12px; cursor:pointer; outline:0; transition:border-color .15s}
+  .ctl:hover{border-color:var(--rule)}
+  .ctl:focus-visible{border-color:var(--m3); box-shadow:0 0 0 3px color-mix(in srgb,var(--m3) 24%,transparent)}
+  select.ctl{padding-right:26px}
+  .lens-wrap{display:flex; align-items:center; gap:7px}
+  .lens-wrap label{font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-muted)}
+
+  /* ---- search ------------------------------------------------------------ */
+  .search{position:relative; width:min(250px,24vw)}
+  .search input{width:100%; height:32px; border:1px solid var(--line); border-radius:8px;
+    background:var(--surface-2); padding:0 30px 0 30px; font-size:12px; outline:0}
+  .search input:focus{border-color:var(--m3); box-shadow:0 0 0 3px color-mix(in srgb,var(--m3) 24%,transparent)}
+  .search .icon{position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--ink-muted); pointer-events:none; font-size:12px}
+  .search .clear{position:absolute; right:6px; top:50%; transform:translateY(-50%); border:0; background:transparent;
+    color:var(--ink-muted); cursor:pointer; padding:4px 6px; border-radius:6px; display:none}
+  .search .clear:hover{background:var(--line); color:var(--ink)}
+  .results{position:absolute; top:38px; left:0; right:0; background:var(--surface); border:1px solid var(--line);
+    border-radius:10px; box-shadow:var(--shadow); overflow:hidden; display:none; max-height:60vh; overflow-y:auto}
+  .results.open{display:block}
+  .results li{list-style:none; display:flex; align-items:center; gap:9px; padding:8px 11px; cursor:pointer; border-bottom:1px solid var(--line)}
+  .results li:last-child{border-bottom:0}
+  .results li:hover,.results li.active{background:var(--surface-2)}
+  .results ul{margin:0;padding:0}
+  .results .sw{width:9px;height:20px;border-radius:3px;flex:0 0 auto}
+  .results b{font-size:12px;font-weight:600;display:block}
+  .results small{color:var(--ink-muted); font-size:10.5px}
+  .results .val{margin-left:auto; font-size:11.5px; font-variant-numeric:tabular-nums; color:var(--ink-2)}
+  .results .empty{padding:12px; color:var(--ink-muted); font-size:12px}
+  .results .grouphead{padding:7px 11px 4px; font-size:9.5px; letter-spacing:.11em; text-transform:uppercase;
+    color:var(--ink-muted); background:var(--surface-2); border-bottom:1px solid var(--line)}
+
+  /* ---- floating panels --------------------------------------------------- */
+  .stage{position:relative; flex:1; min-height:0}
+  /* rails keep the panels and the legend in one column, so they can never overlap */
+  .rail{position:absolute; z-index:20; top:16px; bottom:16px; display:flex; flex-direction:column;
+        gap:10px; justify-content:flex-end; pointer-events:none}
+  .rail > *{pointer-events:auto}
+  .rail-left{left:16px; width:292px}
+  .rail-right{right:16px; width:324px}
+  .panel{
+    min-height:0; display:flex; flex-direction:column; overflow:hidden;
+    background:color-mix(in srgb,var(--surface) 82%,transparent);
+    backdrop-filter:blur(26px) saturate(150%);
+    border:1px solid var(--ring); border-radius:13px; box-shadow:var(--shadow);
+  }
+  .rail .panel{flex:1 1 auto}
+  .panel.hidden{display:none}
+  .phead{display:flex; align-items:center; gap:8px; padding:11px 13px; border-bottom:1px solid var(--line)}
+  .phead h2{margin:0; font-size:11px; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-2); font-weight:600}
+  .phead .x{margin-left:auto; border:0; background:transparent; color:var(--ink-muted); cursor:pointer;
+    border-radius:6px; padding:3px 7px; font-size:14px; line-height:1}
+  .phead .x:hover{background:var(--line); color:var(--ink)}
+  .pbody{overflow-y:auto; padding:12px 13px}
+  .pbody::-webkit-scrollbar{width:8px}
+  .pbody::-webkit-scrollbar-thumb{background:var(--rule); border-radius:8px}
+
+  /* ---- stat tiles -------------------------------------------------------- */
+  .tiles{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px}
+  .tile{background:var(--surface-2); border:1px solid var(--line); border-radius:9px; padding:9px 10px}
+  .tile small{display:block; color:var(--ink-muted); font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; margin-bottom:3px}
+  .tile b{font-size:18px; font-weight:600; letter-spacing:-.02em}   /* proportional figures */
+  .tile.hero{grid-column:1/-1; background:transparent; border-color:var(--ring)}
+  .tile.hero b{font-size:27px; display:block; line-height:1.1}
+  .tile .sub{color:var(--ink-2); font-size:11px; margin-top:2px}
+
+  /* ---- ranking table (the table-view twin of the map encoding) ----------- */
+  table{width:100%; border-collapse:collapse; font-size:11.5px}
+  th{color:var(--ink-muted); font-weight:500; text-align:right; padding:5px 4px; font-size:9.5px;
+     letter-spacing:.06em; text-transform:uppercase; border-bottom:1px solid var(--rule); white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  td{padding:6px 4px; text-align:right; font-variant-numeric:tabular-nums; border-bottom:1px solid var(--line)}
+  tbody tr{cursor:pointer}
+  tbody tr:hover{background:var(--surface-2)}
+  tbody tr.on{background:color-mix(in srgb,var(--m3) 13%,transparent)}
+  tbody tr:last-child td{border-bottom:0}
+  .rname{display:flex; align-items:center; gap:7px}
+  .rname i{width:8px; height:20px; border-radius:3px; flex:0 0 auto}
+  .rname span{display:block; max-width:132px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .rname small{display:block; color:var(--ink-muted); font-size:10px}
+  .rank{color:var(--ink-muted); font-size:10px; width:16px}
+  .crown{color:var(--m3)}
+
+  /* ---- legend (scale) ---------------------------------------------------- */
+  .legend{
+    flex:0 0 auto;
+    background:color-mix(in srgb,var(--surface) 82%,transparent);
+    backdrop-filter:blur(26px) saturate(150%);
+    border:1px solid var(--ring); border-radius:13px; box-shadow:var(--shadow); padding:11px 13px;
+  }
+  /* La leyenda arranca plegada: título y rampa. El párrafo y la nota del stock
+     gris salen con «¿Cómo leerlo?» — estaban siempre abiertos y eran media
+     pantalla de texto que casi nadie lee dos veces. */
+  .legend .lhead{display:flex; align-items:baseline; gap:8px}
+  .legend .lhead h3{flex:1}
+  .legend .lmore{border:0; background:transparent; color:var(--ink-muted); cursor:pointer;
+    font-size:10.5px; padding:2px 4px; border-radius:5px; white-space:nowrap}
+  .legend .lmore:hover{background:var(--line); color:var(--ink)}
+  .legend .more{display:none}
+  .legend.open .more{display:block}
+  .legend.open p{margin-top:7px}
+  .legend h3{margin:0 0 2px; font-size:11px; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-2); font-weight:600}
+  .legend p{margin:0 0 9px; font-size:11px; color:var(--ink-muted); line-height:1.4}
+  .ramp{display:flex; gap:2px}                      /* 2px surface gap between fills */
+  .ramp i{flex:1; height:9px; border-radius:2px}
+  .ramp i:first-child{border-radius:4px 2px 2px 4px}
+  .ramp i:last-child{border-radius:2px 4px 4px 2px}
+  .rampax{display:flex; justify-content:space-between; margin-top:5px; font-size:10px;
+          color:var(--ink-muted); font-variant-numeric:tabular-nums}
+  .legend .ctxnote{display:flex; align-items:center; gap:7px; margin-top:9px; padding-top:9px;
+    border-top:1px solid var(--line); font-size:10.5px; color:var(--ink-muted)}
+  /* Conmutador de modo: dos botones pegados que se leen como uno. */
+  .ctlgroup{display:flex}
+  .ctlgroup .seg{border-radius:0;margin:0}
+  .ctlgroup .seg:first-child{border-radius:8px 0 0 8px}
+  .ctlgroup .seg:last-child{border-radius:0 8px 8px 0;border-left:0}
+  /* La flecha de «buscar este edificio». Discreta hasta que se apunta a su
+     fila: en una tabla de seis, seis enlaces encendidos pesan más que el dato. */
+  td.ir{width:26px;text-align:right;padding-left:0}
+  td.ir a{color:var(--ink-muted);text-decoration:none;font-size:13px;opacity:.55;
+          transition:opacity .15s,color .15s}
+  tr:hover td.ir a{opacity:1;color:var(--m4)}
+  td.ir a:focus-visible{opacity:1;color:var(--m4);outline:2px solid var(--m3);outline-offset:2px}
+
+  .ctlgroup .seg.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+
+  .legend .ctxnote i{width:11px;height:11px;border-radius:3px;background:var(--ctx-hi);flex:0 0 auto}
+
+  /* ---- unit stack + charts ----------------------------------------------- */
+  .sec{margin-top:14px; padding-top:13px; border-top:1px solid var(--line)}
+  .sec:first-child{margin-top:0;padding-top:0;border-top:0}
+  .sec h3{margin:0 0 8px; font-size:10px; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-muted); font-weight:600}
+  .kv{display:flex; justify-content:space-between; align-items:baseline; padding:3px 0; font-size:12px}
+  .kv span{color:var(--ink-2)}
+  .kv b{font-variant-numeric:tabular-nums; font-weight:600}
+  .stack{display:flex; flex-direction:column; gap:2px; margin-top:2px}
+  .floor{display:flex; gap:2px; align-items:center}
+  .floor em{width:20px; font-style:normal; font-size:9px; color:var(--ink-muted); text-align:right;
+            font-variant-numeric:tabular-nums; flex:0 0 auto}
+  .floor i{flex:1; height:8px; border-radius:2px; cursor:pointer}
+  .floor i:hover{outline:2px solid var(--surface); outline-offset:0}
+  .keys{display:flex; flex-wrap:wrap; gap:11px; margin-top:9px}
+  .keys div{display:flex; align-items:center; gap:6px; font-size:11px; color:var(--ink-2)}
+  .keys i{width:10px;height:10px;border-radius:3px}
+  .bars{display:flex; align-items:flex-end; gap:2px; height:46px; margin-top:4px}
+  .bars i{flex:1; background:var(--m3); border-radius:2px 2px 0 0; min-height:1px}
+  .axis{display:flex; justify-content:space-between; color:var(--ink-muted); font-size:10px; margin-top:4px;
+        border-top:1px solid var(--line); padding-top:3px; font-variant-numeric:tabular-nums}
+
+  /* ---- map chrome -------------------------------------------------------- */
+  .mapctl{position:absolute; left:50%; transform:translateX(-50%); bottom:16px; z-index:20; display:flex; gap:6px}
+  .mapctl button{height:32px; padding:0 11px; border:1px solid var(--ring); border-radius:8px;
+    background:color-mix(in srgb,var(--surface) 93%,transparent); backdrop-filter:blur(14px);
+    box-shadow:var(--shadow); cursor:pointer; font-size:11.5px; font-weight:600}
+  .mapctl button:hover{border-color:var(--rule)}
+  .mapctl .sep{width:1px; background:var(--line); margin:0 2px}
+  /* the basemap ships light-only; dim it in dark mode. Pins are HTML, so they stay full-strength. */
+  :root[data-theme="dark"] .maplibregl-canvas{filter:brightness(.60) saturate(.78) contrast(1.06)}
+
+  /* ---- money pins: the portfolio stays findable at every zoom ------------- */
+  .pin{display:flex; align-items:center; gap:6px; cursor:pointer; white-space:nowrap; user-select:none}
+  .pin i{position:relative; width:13px; height:13px; border-radius:50%; flex:0 0 auto;
+         border:2px solid var(--surface); box-shadow:0 1px 5px rgba(0,0,0,.35)}
+  .pin b,.pin em{font-style:normal; font-size:10.5px; font-weight:600; padding:2px 6px; border-radius:5px;
+    border:1px solid var(--ring); background:color-mix(in srgb,var(--surface) 90%,transparent);
+    backdrop-filter:blur(6px); box-shadow:0 1px 4px rgba(0,0,0,.10)}
+  .pin em{color:var(--ink-2); font-variant-numeric:tabular-nums}
+  .pin:hover b{border-color:var(--rule)}
+  .pin.on b{outline:2px solid var(--m3); outline-offset:-1px}
+  .pin.best i{width:17px; height:17px}
+  .pin.best b{border-color:var(--m3)}
+  .pin.best i::after{content:""; position:absolute; inset:-3px; border-radius:50%;
+    border:2px solid var(--m4); animation:halo 2.1s ease-out infinite}
+  @keyframes halo{0%{transform:scale(1);opacity:.7} 70%{transform:scale(2.8);opacity:0} 100%{opacity:0}}
+  .far .pin b,.far .pin em{display:none}
+  .far .pin i{width:9px;height:9px}
+  .far .pin.best b{display:inline-block}      /* the winner keeps its name at every zoom */
+  .far .pin.best i{width:15px;height:15px}
+  .tipcard{min-width:160px; font:inherit}
+  .tipcard b{font-size:13px; display:block}
+  .tipcard span{display:block; color:var(--ink-muted); font-size:11px; margin-top:1px}
+  .tipcard .v{margin-top:5px; font-size:12px; font-weight:600; font-variant-numeric:tabular-nums}
+  .maplibregl-popup-content{background:var(--surface); color:var(--ink); border-radius:10px;
+    border:1px solid var(--ring); box-shadow:var(--shadow); padding:10px 12px}
+  .maplibregl-popup-tip{border-top-color:var(--surface)!important; border-bottom-color:var(--surface)!important}
+  .toast{position:absolute; left:50%; top:14px; transform:translateX(-50%); z-index:40;
+    background:var(--surface); border:1px solid var(--ring); border-radius:9px; box-shadow:var(--shadow);
+    padding:8px 13px; font-size:12px; opacity:0; pointer-events:none; transition:opacity .2s}
+  .toast.on{opacity:1}
+  .showbtn{position:absolute; z-index:20; height:32px; padding:0 11px; border:1px solid var(--ring);
+    border-radius:8px; background:color-mix(in srgb,var(--surface) 93%,transparent); backdrop-filter:blur(14px);
+    box-shadow:var(--shadow); cursor:pointer; font-size:11.5px; font-weight:600; display:none}
+  .showbtn.on{display:block}
+  #showLeft{left:16px; top:16px}
+  #showRight{right:16px; top:16px}
+
+  /* Franja compacta bajo el héroe: dos datos en línea en vez de dos cajas. */
+  .strip{display:flex; gap:18px; margin:9px 2px 12px}
+  .strip span small{display:block; color:var(--ink-muted); font-size:9.5px; letter-spacing:.08em;
+    text-transform:uppercase; margin-bottom:2px}
+  .strip span b{font-size:15px; font-weight:600; font-variant-numeric:tabular-nums}
+
+  @media(max-width:1280px){ .lens-wrap label{display:none} .brand small{display:none} }
+  @media(max-width:1180px){ .rail-left{width:280px} .rail-right{width:300px} }
+  @media(max-width:900px){
+    body{overflow:auto} .app{position:static}
+    .bar{flex-wrap:wrap} .search{width:100%; order:5}
+    .stage{display:block; height:auto}
+    #map{position:relative; inset:auto; height:60vh; min-height:380px}
+    .rail{position:static; width:auto; height:auto; margin:10px 10px 0; justify-content:flex-start}
+    .rail .panel{flex:none; max-height:none}
+    .mapctl{position:static; transform:none; margin:10px; justify-content:center; flex-wrap:wrap}
+    .showbtn{position:static; margin:10px}
+  }
+  @media(prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="bar">
+    <div class="brand">
+      <div class="mark">ED</div>
+      <div><h1>Inteligencia de desarrollo</h1><small>Ciudad de Panamá</small></div>
+    </div>
+
+    <div class="search">
+      <span class="icon">⌕</span>
+      <input id="q" type="search" autocomplete="off" spellcheck="false"
+             placeholder="Buscar un edificio o distrito…" aria-label="Buscar edificios por nombre">
+      <button class="clear" id="qClear" aria-label="Limpiar la búsqueda">✕</button>
+      <div class="results" id="qRes" role="listbox"></div>
+    </div>
+
+    <div class="lens-wrap">
+      <label for="lens">Lente</label>
+      <select class="ctl" id="lens" aria-label="Elegir la medida de rentabilidad que colorea el mapa"></select>
+    </div>
+
+    <div class="ctlgroup" role="group" aria-label="Modo del visor">
+      <button class="ctl seg on" id="modoCartera">Cartera</button>
+      <button class="ctl seg" id="modoEstudio">Estudio de mercado</button>
+    </div>
+
+    <select class="ctl" id="area" aria-label="Ir a una zona"></select>
+
+    <div class="spacer"></div>
+    <button class="ctl" id="theme">Oscuro</button>
+  </div>
+
+  <div class="stage">
+    <div id="map" aria-label="Mapa 3D de la cartera de promociones en Ciudad de Panamá"></div>
+
+    <button class="showbtn" id="showLeft">Ranking ▸</button>
+    <button class="showbtn" id="showRight">◂ Ficha</button>
+
+    <div class="rail rail-left">
+      <section class="panel" id="leftPanel">
+        <div class="phead"><h2 id="rankTitle">Ordenado por ROI</h2><button class="x" id="closeLeft" aria-label="Ocultar el panel">✕</button></div>
+        <div class="pbody" id="rankBody"></div>
+      </section>
+      <div class="legend" id="legend"></div>
+    </div>
+
+    <div class="rail rail-right">
+      <section class="panel" id="rightPanel">
+        <div class="phead"><h2>Ficha del edificio</h2><button class="x" id="closeRight" aria-label="Ocultar el panel">✕</button></div>
+        <div class="pbody" id="detailBody"></div>
+      </section>
+    </div>
+
+    <div class="mapctl">
+      <button id="fitAll">Vista general</button>
+      <button id="tilt">2D view</button>
+      <span class="sep"></span>
+      <button id="zoomOut" aria-label="Alejar">−</button>
+      <button id="zoomIn" aria-label="Acercar">+</button>
+      <button id="north" aria-label="Volver al norte">N</button>
+    </div>
+    <div class="toast" id="toast"></div>
+  </div>
+</div>
+
+<script type="module">
+import * as maplibregl from './node_modules/maplibre-gl/dist/maplibre-gl.mjs';
+
+/* ============================================================
+   Deterministic data model — Panama City residential portfolio
+   ============================================================ */
+const rng = s => () => (s = s*1664525 + 1013904223 >>> 0, s / 4294967296);
+
+/* ---- real buildings ---------------------------------------------------------
+   Footprints, names, heights and positions come from OpenStreetMap (Overpass,
+   fetched for this build). Each row is [name, district, floors, lat, lng, ring].
+   The FINANCIALS below are still a deterministic model, not real deal data. */
+const OSM = [
+['Yoo Panama','Marbella',78,8.976384,-79.523526,[[-79.52361,8.97603],[-79.52323,8.9761],[-79.5234,8.97692],[-79.52378,8.97685],[-79.52361,8.97603]]],
+['P.H. Vitri','Costa del Este',74,9.010634,-79.463733,[[-79.46393,9.01041],[-79.46374,9.01043],[-79.46352,9.01047],[-79.46344,9.01048],[-79.46354,9.01116],[-79.46404,9.01109],[-79.46393,9.01041]]],
+['O2 Ocean Two','Costa del Este',73,9.010617,-79.464171,[[-79.46404,9.01109],[-79.46393,9.01041],[-79.46393,9.01038],[-79.46408,9.01036],[-79.46432,9.01032],[-79.46446,9.0103],[-79.46457,9.01101],[-79.46404,9.01109]]],
+['P.H. Pearl at the Sea','Costa del Este',70,9.010273,-79.465998,[[-79.46584,9.01081],[-79.46573,9.01017],[-79.46583,9.01011],[-79.46589,9.01009],[-79.46595,9.01009],[-79.46611,9.01019],[-79.46616,9.01028],[-79.46613,9.01032],[-79.46623,9.01033],[-79.46584,9.01081]]],
+['JW Marriott Panama','Punta Pacífica',70,8.975378,-79.507132,[[-79.50645,8.97509],[-79.50646,8.97541],[-79.50649,8.97592],[-79.50736,8.97573],[-79.50743,8.97569],[-79.50751,8.9754],[-79.5075,8.97522],[-79.50734,8.9751],[-79.50731,8.97508],[-79.50645,8.97509]]],
+['PH Waters on the Bay','Marbella',69,8.976378,-79.523114,[[-79.52326,8.97654],[-79.52301,8.9766],[-79.5229,8.97613],[-79.52315,8.97608],[-79.52326,8.97654]]],
+['PH The Point','Punta Paitilla',67,8.971139,-79.517833,[[-79.51778,8.97125],[-79.51773,8.97119],[-79.51754,8.97098],[-79.51786,8.9707],[-79.51793,8.97079],[-79.51796,8.971],[-79.51803,8.97142],[-79.51788,8.97162],[-79.51772,8.97146],[-79.51778,8.97125]]],
+['Megapolis Hotel Panama','Punta Paitilla',63,8.977413,-79.517851,[[-79.51821,8.97758],[-79.51821,8.97731],[-79.5179,8.97731],[-79.51787,8.97731],[-79.51784,8.97731],[-79.51729,8.97731],[-79.51729,8.97758],[-79.51821,8.97758]]],
+['P.H. Paramount','Costa del Este',59,9.010766,-79.468333,[[-79.46808,9.01099],[-79.468,9.01047],[-79.46851,9.01039],[-79.46843,9.01072],[-79.46846,9.01074],[-79.46851,9.01077],[-79.46839,9.01083],[-79.46836,9.01081],[-79.46832,9.01086],[-79.46808,9.01099]]],
+['PH Los Delfines','Marbella',58,8.975916,-79.520142,[[-79.52017,8.97604],[-79.5203,8.97588],[-79.5201,8.97573],[-79.51997,8.97589],[-79.52017,8.97604]]],
+['P.H. Matisse','Costa del Este',55,9.009545,-79.472813,[[-79.47296,9.00923],[-79.47259,9.0093],[-79.47263,9.00948],[-79.47267,9.00967],[-79.47268,9.00975],[-79.4727,9.00982],[-79.47307,9.00974],[-79.47306,9.00968],[-79.47296,9.00923]]],
+['Evolution Tower','Marbella',54,8.979863,-79.524983,[[-79.52516,8.98002],[-79.52517,8.97978],[-79.52498,8.9795],[-79.5246,8.97976],[-79.52483,8.98009],[-79.52516,8.98002]]],
+['Ocean One','Costa del Este',54,9.008669,-79.475342,[[-79.4755,9.00841],[-79.47561,9.0088],[-79.47556,9.00881],[-79.47537,9.00884],[-79.47527,9.00887],[-79.47518,9.00891],[-79.47504,9.00854],[-79.47513,9.00853],[-79.47536,9.00844],[-79.4755,9.00841]]],
+['F&F Tower','Obarrio',52,8.982915,-79.518389,[[-79.51835,8.98312],[-79.51815,8.98278],[-79.51845,8.9826],[-79.51865,8.98294],[-79.51835,8.98312]]],
+['P.H. Costanera','La Cresta',52,8.976997,-79.528391,[[-79.52857,8.97723],[-79.5283,8.97729],[-79.52828,8.9772],[-79.52819,8.97676],[-79.52816,8.97671],[-79.52842,8.97658],[-79.52848,8.97682],[-79.52855,8.97716],[-79.52857,8.97723]]],
+['P.H. Ten Tower','Costa del Este',50,9.010119,-79.467187,[[-79.46744,9.01009],[-79.46751,9.01055],[-79.46699,9.01031],[-79.46699,9.01017],[-79.46702,9.01011],[-79.46708,9.00996],[-79.46722,9.00996],[-79.46729,9.00997],[-79.46739,9.01001],[-79.46744,9.01009]]],
+['Financial Park Tower','Costa del Este',50,9.010277,-79.476654,[[-79.47703,9.01021],[-79.47677,9.0106],[-79.47661,9.01063],[-79.47646,9.01057],[-79.4765,9.01046],[-79.47637,9.01013],[-79.47659,9.01004],[-79.47665,9.00993],[-79.47678,9.00995],[-79.47703,9.01021]]],
+['Regalia','Costa del Este',50,9.008889,-79.474519,[[-79.47466,9.00873],[-79.47458,9.00875],[-79.47451,9.00873],[-79.47448,9.00874],[-79.47437,9.00878],[-79.47432,9.00879],[-79.47426,9.00884],[-79.47443,9.00946],[-79.47482,9.00931],[-79.47466,9.00873]]],
+['P.H. Le Mare','Coco del Mar',50,8.992459,-79.497956,[[-79.49804,8.99218],[-79.4977,8.99224],[-79.49779,8.99269],[-79.49792,8.99266],[-79.49808,8.99263],[-79.49812,8.99262],[-79.49804,8.99218]]],
+['Le Méridien Panama','Marbella',48,8.975843,-79.525352,[[-79.52549,8.97577],[-79.52542,8.97579],[-79.52541,8.97577],[-79.52522,8.97581],[-79.52523,8.97583],[-79.52516,8.97584],[-79.52521,8.97604],[-79.52553,8.97597],[-79.52549,8.97577]]],
+['Grand Tower','Punta Pacífica',48,8.976328,-79.507149,[[-79.50744,8.97646],[-79.50655,8.97645],[-79.50655,8.97617],[-79.50707,8.97611],[-79.50735,8.97627],[-79.50736,8.97634],[-79.50743,8.97637],[-79.50744,8.97646]]],
+['P.H. Windrose','Coco del Mar',48,8.991936,-79.49678,[[-79.49688,8.99172],[-79.49653,8.99179],[-79.49663,8.99226],[-79.49698,8.99219],[-79.49688,8.99172]]],
+['PH Altamar del Este','Costa del Este',47,9.008866,-79.474964,[[-79.47522,9.0092],[-79.47482,9.00931],[-79.47467,9.00876],[-79.47476,9.00874],[-79.47489,9.00871],[-79.47487,9.00864],[-79.47501,9.00859],[-79.47505,9.00858],[-79.47514,9.00893],[-79.47522,9.0092]]],
+['Luxor 400','El Cangrejo',46,8.987802,-79.527156,[[-79.52717,8.98763],[-79.52694,8.98767],[-79.527,8.98805],[-79.52727,8.98801],[-79.52731,8.988],[-79.52722,8.98762],[-79.52717,8.98763]]],
+['P.H. Panama Bay Tower','Costa del Este',46,9.009909,-79.470854,[[-79.4708,9.01028],[-79.47081,9.01029],[-79.47119,9.01021],[-79.47095,9.00975],[-79.4709,9.00974],[-79.47083,9.00977],[-79.47079,9.00977],[-79.47074,9.00978],[-79.47072,9.0098],[-79.4708,9.01028]]],
+['Ocean Drive','Punta Pacífica',45,8.981814,-79.507727,[[-79.50786,8.98175],[-79.50785,8.98182],[-79.50772,8.98194],[-79.50763,8.98195],[-79.50758,8.98194],[-79.50756,8.98188],[-79.50771,8.9817],[-79.50776,8.98169],[-79.50782,8.98169],[-79.50786,8.98175]]],
+['P.H. Ocean Sky','Coco del Mar',45,8.993025,-79.497525,[[-79.4976,8.99318],[-79.49744,8.99321],[-79.49722,8.99289],[-79.49753,8.99285],[-79.49755,8.99288],[-79.49757,8.99296],[-79.49756,8.993],[-79.49758,8.99305],[-79.49761,8.99313],[-79.4976,8.99318]]],
+['PH Punta Roca','Punta Paitilla',44,8.971211,-79.517498,[[-79.51752,8.97138],[-79.51773,8.97119],[-79.51754,8.97098],[-79.51735,8.97116],[-79.51733,8.97118],[-79.51752,8.97138]]],
+['P.H. Edificio Central','Bella Vista',43,8.984074,-79.524185,[[-79.52429,8.98406],[-79.52426,8.9839],[-79.52394,8.98409],[-79.52414,8.98427],[-79.52429,8.98406]]],
+['Edificio Bayshore','Punta Paitilla',42,8.972576,-79.516058,[[-79.516,8.97255],[-79.51605,8.97244],[-79.51613,8.97244],[-79.51611,8.97249],[-79.51619,8.97251],[-79.51607,8.97281],[-79.51591,8.9728],[-79.516,8.97255]]],
+['P.H. Icon Tower','Coco del Mar',42,9.001888,-79.495778,[[-79.49559,9.00202],[-79.49564,9.00187],[-79.4957,9.00176],[-79.49587,9.00185],[-79.49594,9.00171],[-79.49603,9.00176],[-79.49585,9.00213],[-79.49559,9.00202]]],
+['P.H. Marea II','Costa del Este',42,9.009716,-79.472045,[[-79.47196,9.01005],[-79.47213,9.01002],[-79.47233,9.00998],[-79.47231,9.00986],[-79.47222,9.00933],[-79.47199,9.00941],[-79.47191,9.00942],[-79.47193,9.0095],[-79.47185,9.00951],[-79.47196,9.01005]]],
+['Times Square Center','Costa del Este',42,9.016033,-79.466871,[[-79.46739,9.01611],[-79.46734,9.01578],[-79.46728,9.01579],[-79.46658,9.01589],[-79.46653,9.0159],[-79.46622,9.01595],[-79.46627,9.01626],[-79.46628,9.01628],[-79.46696,9.01618],[-79.46739,9.01611]]],
+['P.H. Parkside','Costa del Este',42,9.011417,-79.470983,[[-79.47107,9.0112],[-79.47069,9.01127],[-79.47079,9.01179],[-79.47117,9.01172],[-79.47109,9.01132],[-79.47107,9.0112]]],
+['P.H. Aria','Costa del Este',42,9.012535,-79.468307,[[-79.46793,9.01232],[-79.46799,9.0128],[-79.46853,9.01272],[-79.46852,9.01265],[-79.46853,9.01264],[-79.46852,9.0126],[-79.46851,9.01223],[-79.46793,9.01232]]],
+['P.H. Panorama','Coco del Mar',40,8.995462,-79.498501,[[-79.49835,8.99573],[-79.49841,8.9953],[-79.49845,8.99531],[-79.49852,8.99531],[-79.49857,8.99531],[-79.49856,8.99541],[-79.49858,8.99541],[-79.49854,8.99551],[-79.49853,8.99559],[-79.49835,8.99573]]],
+['The Landmark','Punta Paitilla',40,8.974312,-79.516377,[[-79.51655,8.97431],[-79.51655,8.97426],[-79.51603,8.97418],[-79.5162,8.9745],[-79.51655,8.97431]]],
+['Breeze','Costa del Este',40,9.016208,-79.467568,[[-79.4677,9.01606],[-79.46773,9.01629],[-79.46775,9.01638],[-79.46738,9.01643],[-79.46733,9.01612],[-79.46739,9.01611],[-79.4677,9.01606]]],
+['P.H. Elevation','Costa del Este',40,9.01643,-79.467188,[[-79.46702,9.01652],[-79.46696,9.01618],[-79.46733,9.01612],[-79.46738,9.01643],[-79.46738,9.01647],[-79.46723,9.01649],[-79.46724,9.01653],[-79.46716,9.01654],[-79.46715,9.0165],[-79.46702,9.01652]]],
+['Luxor 300','El Cangrejo',40,8.987771,-79.527464,[[-79.5276,8.98784],[-79.52751,8.98748],[-79.52743,8.98748],[-79.52725,8.98761],[-79.52722,8.98762],[-79.52731,8.988],[-79.52751,8.98794],[-79.5275,8.98792],[-79.52759,8.9879],[-79.5276,8.98784]]],
+['P.H. The Palace','La Cresta',40,8.976359,-79.530013,[[-79.53013,8.97665],[-79.52999,8.97661],[-79.52985,8.97658],[-79.52977,8.97656],[-79.52986,8.97621],[-79.52995,8.97623],[-79.53002,8.97593],[-79.53015,8.97597],[-79.53008,8.97626],[-79.53013,8.97665]]],
+['PH Colores de Bella Vista','La Cresta',40,8.97458,-79.529571,[[-79.52971,8.97472],[-79.52969,8.97472],[-79.52964,8.97471],[-79.52942,8.97468],[-79.52942,8.97465],[-79.52938,8.97464],[-79.52945,8.97429],[-79.52962,8.97433],[-79.52961,8.97435],[-79.52971,8.97472]]],
+['Titanium Tower','Costa del Este',40,9.011559,-79.470463,[[-79.47069,9.01127],[-79.47036,9.01134],[-79.47037,9.01139],[-79.47036,9.01141],[-79.47038,9.01154],[-79.47035,9.01162],[-79.47036,9.01169],[-79.47051,9.01183],[-79.47052,9.01185],[-79.47069,9.01127]]],
+['P.H. Murano','Costa del Este',40,9.010536,-79.464806,[[-79.46476,9.01052],[-79.46481,9.01062],[-79.46481,9.01084],[-79.46446,9.0103],[-79.46471,9.01033],[-79.46485,9.01039],[-79.46499,9.01043],[-79.46499,9.01052],[-79.46489,9.01056],[-79.46476,9.01052]]],
+['P.H. Pacific Parks Towers','El Cangrejo',40,8.994728,-79.53082,[[-79.53078,8.9951],[-79.5312,8.99461],[-79.53099,8.99436],[-79.5308,8.99459],[-79.53072,8.99452],[-79.53046,8.99483],[-79.53078,8.9951]]],
+['The Sands Apartments & Mall','Santa Ana',38,8.961581,-79.536974,[[-79.53726,8.96159],[-79.53703,8.96127],[-79.53698,8.96122],[-79.53695,8.96128],[-79.53649,8.96203],[-79.53658,8.96206],[-79.53723,8.96161],[-79.53726,8.96159]]],
+['P.H. Boutique Quartier del Mar','Coco del Mar',37,8.99566,-79.49883,[[-79.49901,8.99554],[-79.49858,8.99562],[-79.49856,8.99579],[-79.49867,8.99577],[-79.49899,8.99571],[-79.49899,8.99564],[-79.49901,8.99554]]],
+['P.H. Rainbow','El Carmen',36,8.9936,-79.52059,[[-79.52042,8.99363],[-79.52071,8.9938],[-79.52085,8.99355],[-79.52056,8.99339],[-79.52042,8.99363]]],
+['P.H. Marea I','Costa del Este',36,9.009629,-79.471727,[[-79.47196,9.01005],[-79.47157,9.01013],[-79.47146,9.00958],[-79.4716,9.00953],[-79.47174,9.00949],[-79.47176,9.0095],[-79.47178,9.0095],[-79.47179,9.00951],[-79.47185,9.00951],[-79.47196,9.01005]]],
+['Torre Zeus','Costa del Este',36,9.010449,-79.465505,[[-79.46573,9.01017],[-79.46536,9.01023],[-79.46536,9.01028],[-79.46533,9.01028],[-79.46538,9.01057],[-79.46539,9.01065],[-79.46543,9.01087],[-79.46584,9.01081],[-79.46573,9.01017]]],
+['P.H. Puntarenas','Coco del Mar',36,8.999216,-79.497254,[[-79.49741,8.99917],[-79.49714,8.99903],[-79.49702,8.99929],[-79.49729,8.99942],[-79.49741,8.99917]]],
+['P.H. Creta Palace','La Cresta',35,8.981097,-79.530494,[[-79.53058,8.98091],[-79.53065,8.98103],[-79.53059,8.98132],[-79.53051,8.98136],[-79.53025,8.98129],[-79.53031,8.98086],[-79.53058,8.98091]]],
+['Winston Churchill','Punta Paitilla',35,8.97218,-79.514895,[[-79.51508,8.97214],[-79.51485,8.97195],[-79.51461,8.97223],[-79.51484,8.97243],[-79.51508,8.97214]]],
+['Vertikal','Costa del Este',35,9.015876,-79.470169,[[-79.47032,9.01562],[-79.47002,9.01567],[-79.47005,9.01586],[-79.47007,9.01599],[-79.4701,9.01599],[-79.47011,9.01601],[-79.47012,9.01607],[-79.47039,9.01604],[-79.47032,9.01562]]],
+['P.H. Cabomarzo','Coco del Mar',35,8.991141,-79.498783,[[-79.4991,8.9912],[-79.49863,8.99129],[-79.49862,8.99126],[-79.49862,8.99126],[-79.4986,8.99112],[-79.49856,8.99094],[-79.49903,8.99085],[-79.4991,8.9912]]],
+['PH Victory Sport','Coco del Mar',35,9.000051,-79.497537,[[-79.49771,9.00002],[-79.4974,8.99987],[-79.49728,9.0001],[-79.49759,9.00025],[-79.49771,9.00002]]],
+['P.H. Signature Point','La Cresta',35,8.9786,-79.532059,[[-79.53229,8.97855],[-79.53228,8.97853],[-79.53235,8.97849],[-79.53206,8.97845],[-79.53178,8.97862],[-79.53183,8.9787],[-79.53188,8.97874],[-79.53188,8.97874],[-79.5319,8.97878],[-79.53229,8.97855]]],
+['P.H. Marina Park Tower','La Cresta',34,8.975096,-79.529533,[[-79.52942,8.97525],[-79.52942,8.97522],[-79.52951,8.97487],[-79.52956,8.97489],[-79.52964,8.9749],[-79.52969,8.97492],[-79.52959,8.97529],[-79.52955,8.97528],[-79.52942,8.97525]]],
+['P.H. Marquis Tower','Bella Vista',34,8.98664,-79.526828,[[-79.52688,8.98644],[-79.52713,8.98661],[-79.52692,8.98691],[-79.52676,8.9868],[-79.52669,8.98673],[-79.52668,8.98667],[-79.52674,8.98657],[-79.52677,8.98659],[-79.52688,8.98644]]],
+['Carreras El Carmen','El Carmen',34,8.993855,-79.521215,[[-79.52137,8.99385],[-79.52135,8.99384],[-79.52114,8.99372],[-79.52109,8.99369],[-79.52095,8.99393],[-79.52123,8.99409],[-79.52137,8.99385]]],
+['Princesa y Condesa del Mar','Marbella',33,8.976242,-79.524024,[[-79.52429,8.97632],[-79.52422,8.976],[-79.52398,8.97606],[-79.52394,8.9762],[-79.52391,8.97607],[-79.52381,8.97644],[-79.52401,8.97639],[-79.52401,8.97626],[-79.52403,8.97638],[-79.52429,8.97632]]],
+['Citrus','San Francisco',33,8.994889,-79.506227,[[-79.50636,8.99492],[-79.50606,8.99498],[-79.50603,8.99484],[-79.50633,8.99478],[-79.50636,8.99492]]],
+['P.H. The View','Coco del Mar',33,8.991402,-79.499935,[[-79.49998,8.99123],[-79.50005,8.99162],[-79.49987,8.99165],[-79.49979,8.99127],[-79.49998,8.99123]]],
+['P.H. Loma Vista Tower','Vista Hermosa',33,9.004301,-79.515711,[[-79.51582,9.00403],[-79.51599,9.00415],[-79.51569,9.00457],[-79.51558,9.0045],[-79.51553,9.00443],[-79.51554,9.0044],[-79.51582,9.00403]]],
+['Waldorf Astoria Panama','Marbella',32,8.976997,-79.524719,[[-79.5249,8.97706],[-79.52485,8.97682],[-79.52444,8.97691],[-79.5245,8.97715],[-79.5249,8.97706]]],
+['Torre Alcala','Costa del Este',32,9.016474,-79.463849,[[-79.46374,9.01665],[-79.46401,9.01661],[-79.46397,9.01635],[-79.46395,9.01627],[-79.46368,9.01631],[-79.46374,9.01665]]],
+['P.H. Brisa Marina','Costa del Este',32,9.010362,-79.472226,[[-79.47238,9.01015],[-79.47246,9.01055],[-79.47208,9.01063],[-79.47205,9.01047],[-79.472,9.01023],[-79.47238,9.01015]]],
+['Luxor Towers 100-200','El Cangrejo',32,8.987396,-79.527911,[[-79.52796,8.98709],[-79.52782,8.98716],[-79.52785,8.98722],[-79.52776,8.98763],[-79.52774,8.9877],[-79.52779,8.98779],[-79.52822,8.98756],[-79.5281,8.98733],[-79.52796,8.98709]]],
+['P.H. Bayside','Costa del Este',32,9.009999,-79.471348,[[-79.47119,9.01021],[-79.47158,9.01013],[-79.47157,9.01013],[-79.47147,9.00962],[-79.47109,9.0097],[-79.47119,9.01021]]],
+['P.H. Terranova','El Cangrejo',32,8.989824,-79.529865,[[-79.52966,8.98977],[-79.52992,8.98961],[-79.53006,8.98987],[-79.53007,8.98989],[-79.52982,8.99003],[-79.52966,8.98977]]],
+['Dynasty Residences','La Cresta',32,8.974694,-79.530432,[[-79.53034,8.97448],[-79.53038,8.97449],[-79.53069,8.97456],[-79.53063,8.97483],[-79.53059,8.97497],[-79.53024,8.97489],[-79.53025,8.97485],[-79.53034,8.97448]]],
+['Edificio Coral Reef','Marbella',31,8.976781,-79.521726,[[-79.52187,8.97689],[-79.52171,8.97654],[-79.52151,8.97662],[-79.52167,8.97697],[-79.52187,8.97689]]],
+['Torre BAC','La Cresta',30,8.974193,-79.5287,[[-79.52889,8.97456],[-79.5284,8.97442],[-79.52848,8.97425],[-79.5285,8.97425],[-79.52857,8.97426],[-79.52868,8.97417],[-79.5288,8.97399],[-79.52885,8.97389],[-79.52908,8.97395],[-79.52889,8.97456]]],
+['P.H. Balboa Tower','La Cresta',30,8.976134,-79.527676,[[-79.52758,8.97598],[-79.52769,8.97604],[-79.52775,8.97604],[-79.52779,8.97609],[-79.52789,8.97615],[-79.52771,8.97647],[-79.5274,8.97631],[-79.52758,8.97598]]],
+['P.H. Vista Horizonte','Vista Hermosa',30,8.99859,-79.522314,[[-79.52224,8.99874],[-79.52213,8.99844],[-79.52241,8.99834],[-79.52255,8.99869],[-79.52224,8.99874]]],
+['P.H. Green Park View','El Carmen',30,8.993753,-79.523036,[[-79.52303,8.99358],[-79.52317,8.9937],[-79.52314,8.99374],[-79.52317,8.99377],[-79.52294,8.99403],[-79.52277,8.99388],[-79.52303,8.99358]]],
+['Crillón','Punta Paitilla',30,8.971105,-79.517025,[[-79.51698,8.97124],[-79.51721,8.97103],[-79.5171,8.97091],[-79.51686,8.97111],[-79.51698,8.97124]]],
+['Regent','Punta Paitilla',30,8.971214,-79.516704,[[-79.51688,8.97127],[-79.51681,8.97111],[-79.51667,8.97116],[-79.51662,8.97115],[-79.51659,8.97117],[-79.51659,8.97121],[-79.51662,8.97122],[-79.51668,8.97136],[-79.51688,8.97127]]],
+['Torre Banco Panamá','Costa del Este',30,9.009554,-79.475621,[[-79.47542,9.0094],[-79.47555,9.00984],[-79.47564,9.00982],[-79.47582,9.00977],[-79.47579,9.00966],[-79.47572,9.00941],[-79.4757,9.00932],[-79.47552,9.00937],[-79.47542,9.0094]]],
+['Ph Metropolitan Park','Vista Hermosa',30,8.996807,-79.518592,[[-79.51844,8.99706],[-79.51868,8.99711],[-79.51882,8.99643],[-79.51858,8.99638],[-79.51844,8.99706]]],
+['P.H. Vitro Loft','Bella Vista',30,8.985142,-79.529535,[[-79.52982,8.98513],[-79.52964,8.98485],[-79.52928,8.98509],[-79.52929,8.98511],[-79.52944,8.98534],[-79.52945,8.98536],[-79.52982,8.98513]]],
+['Mirador del Cangrejo','El Cangrejo',30,8.988567,-79.530236,[[-79.53028,8.98869],[-79.53019,8.98875],[-79.53018,8.98873],[-79.53002,8.98846],[-79.53,8.98842],[-79.53016,8.98833],[-79.53045,8.98845],[-79.53042,8.98853],[-79.53037,8.98861],[-79.53028,8.98869]]],
+['PH Belle View','La Cresta',30,8.974687,-79.530214,[[-79.53025,8.97485],[-79.53034,8.97448],[-79.53016,8.97444],[-79.53007,8.97481],[-79.53025,8.97485]]],
+['P.H. Prestige','La Cresta',30,8.97627,-79.529122,[[-79.52901,8.9764],[-79.5292,8.97644],[-79.52928,8.97608],[-79.5291,8.97604],[-79.52901,8.9764]]],
+['P.H. Torre Imperial','La Cresta',30,8.979393,-79.532532,[[-79.53263,8.97922],[-79.53279,8.97951],[-79.53245,8.97969],[-79.53231,8.97944],[-79.53248,8.97935],[-79.53246,8.97931],[-79.53263,8.97922]]],
+['P.H. Venezia Tower','El Carmen',30,8.994146,-79.524408,[[-79.52422,8.99422],[-79.52435,8.9939],[-79.52469,8.99403],[-79.52456,8.99435],[-79.52422,8.99422]]],
+['P.H. Vicky Village','El Carmen',30,8.9921,-79.52157,[[-79.52163,8.99228],[-79.52132,8.9921],[-79.52148,8.99183],[-79.52179,8.99201],[-79.52163,8.99228]]],
+['P.H. Onyx Tower','El Cangrejo',30,8.991857,-79.524417,[[-79.52467,8.99157],[-79.52451,8.99149],[-79.52431,8.99194],[-79.52433,8.99195],[-79.52428,8.992],[-79.52427,8.99203],[-79.52429,8.99206],[-79.52442,8.99212],[-79.52467,8.99157]]],
+['P.H. The Forum','El Cangrejo',30,8.991183,-79.527017,[[-79.52714,8.99107],[-79.52692,8.99095],[-79.5268,8.99123],[-79.5269,8.99127],[-79.52694,8.99129],[-79.527,8.99132],[-79.52702,8.99128],[-79.52704,8.9913],[-79.52714,8.99113],[-79.52714,8.99107]]],
+['P.H. Astoria','El Cangrejo',30,8.990105,-79.530351,[[-79.53034,8.98987],[-79.5305,8.99012],[-79.53048,8.9902],[-79.53043,8.99024],[-79.53038,8.99021],[-79.53025,8.99029],[-79.53008,8.99003],[-79.53034,8.98987]]],
+['P.H. Van Gogh','Bella Vista',30,8.984991,-79.530466,[[-79.53025,8.98484],[-79.53051,8.98468],[-79.5308,8.98513],[-79.53054,8.98529],[-79.53045,8.98515],[-79.53025,8.98484]]],
+['P.H. Cranc Tower','El Cangrejo',30,8.986892,-79.527716,[[-79.52785,8.98689],[-79.52768,8.98665],[-79.52751,8.98689],[-79.52769,8.98701],[-79.52771,8.98703],[-79.52785,8.98689]]],
+['PH Villa del Mar','Marbella',29,8.97616,-79.524848,[[-79.52477,8.97632],[-79.52469,8.97598],[-79.52496,8.97591],[-79.52504,8.97626],[-79.52477,8.97632]]],
+['P.H. Bella Vista Park','La Cresta',28,8.975116,-79.529982,[[-79.52985,8.97499],[-79.52992,8.97501],[-79.5299,8.97506],[-79.53012,8.97511],[-79.53013,8.97506],[-79.53019,8.97507],[-79.53011,8.97542],[-79.52977,8.97534],[-79.52985,8.97499]]],
+['Maresias','Punta Paitilla',28,8.970862,-79.517383,[[-79.51712,8.97088],[-79.51737,8.97068],[-79.51744,8.97069],[-79.51749,8.97073],[-79.51751,8.9708],[-79.51751,8.97096],[-79.51754,8.97098],[-79.51735,8.97116],[-79.51712,8.97088]]],
+['P.H. Torre Cerromar','La Cresta',28,8.977883,-79.529103,[[-79.52898,8.97803],[-79.52891,8.97769],[-79.52921,8.97762],[-79.52928,8.97794],[-79.52925,8.97798],[-79.52898,8.97803]]],
+['P.H. Blue Park','La Cresta',28,8.976423,-79.529647,[[-79.5295,8.97649],[-79.52958,8.97614],[-79.52986,8.97621],[-79.52977,8.97656],[-79.52972,8.97655],[-79.52961,8.97652],[-79.5295,8.97649]]],
+['P.H. Park View','Costa del Este',28,9.01586,-79.467949,[[-79.46816,9.01599],[-79.4681,9.01564],[-79.4681,9.01562],[-79.46771,9.01568],[-79.46773,9.01579],[-79.46775,9.01597],[-79.46777,9.01605],[-79.46806,9.01601],[-79.46816,9.01599]]],
+['P.H. Great City Tower','San Francisco',28,8.989661,-79.503164,[[-79.50303,8.98949],[-79.50309,8.98987],[-79.50328,8.98984],[-79.50328,8.98983],[-79.50327,8.98945],[-79.50303,8.98949]]],
+['P.H. Veranda Tower','Coco del Mar',28,8.997142,-79.497969,[[-79.49802,8.99728],[-79.49789,8.99721],[-79.49788,8.99714],[-79.49789,8.99705],[-79.4979,8.99704],[-79.49798,8.9971],[-79.49806,8.99706],[-79.49807,8.99708],[-79.49805,8.99716],[-79.49802,8.99728]]],
+['P.H. Carreras Tower','El Cangrejo',28,8.991858,-79.527199,[[-79.52731,8.99201],[-79.52694,8.99179],[-79.52703,8.99163],[-79.5274,8.99185],[-79.52731,8.99201]]],
+['P.H. Solaris','El Cangrejo',28,8.986277,-79.528948,[[-79.52918,8.98625],[-79.52906,8.98616],[-79.52891,8.98606],[-79.5287,8.98636],[-79.52874,8.98639],[-79.52886,8.98647],[-79.52918,8.98625]]],
+['Prime Time Tower','Costa del Este',27,9.010009,-79.474215,[[-79.4744,9.01015],[-79.47413,9.01022],[-79.47412,9.01021],[-79.4741,9.01021],[-79.474,9.00976],[-79.47428,9.00968],[-79.47428,9.0097],[-79.4744,9.01015]]],
+['East Coast Towers','Costa del Este',27,9.015917,-79.469907,[[-79.47002,9.01567],[-79.46973,9.01571],[-79.46972,9.01597],[-79.46975,9.01605],[-79.46975,9.01607],[-79.47,9.01603],[-79.47002,9.01601],[-79.47001,9.01593],[-79.47,9.01587],[-79.47002,9.01567]]],
+['P.H. Plaza Real','San Francisco',26,8.990474,-79.504849,[[-79.50494,8.99032],[-79.50496,8.99033],[-79.50503,8.99071],[-79.50465,8.99078],[-79.50457,8.99039],[-79.50494,8.99032]]],
+['A19 Cincuentenario','Coco del Mar',26,8.998569,-79.49825,[[-79.49844,8.99856],[-79.49809,8.99836],[-79.49796,8.99859],[-79.49832,8.99878],[-79.49844,8.99856]]],
+['P.H. Santorini','Coco del Mar',26,8.997098,-79.497437,[[-79.49756,8.99722],[-79.49743,8.99721],[-79.49729,8.99717],[-79.49726,8.99717],[-79.49733,8.99702],[-79.49734,8.997],[-79.49743,8.99703],[-79.49752,8.99704],[-79.49758,8.99706],[-79.49756,8.99722]]],
+['P.H. Riviera Del Golf','Coco del Mar',26,8.997791,-79.497921,[[-79.49764,8.99786],[-79.49777,8.99753],[-79.49805,8.99767],[-79.49803,8.99769],[-79.49811,8.99773],[-79.4981,8.99775],[-79.49797,8.99801],[-79.49797,8.99802],[-79.49764,8.99786]]],
+['P.H. Ecco Tower','Vista Hermosa',26,9.004798,-79.516077,[[-79.51611,9.00493],[-79.51608,9.00492],[-79.51605,9.0049],[-79.51581,9.00472],[-79.51606,9.00448],[-79.51626,9.00461],[-79.51614,9.00488],[-79.51611,9.00493]]],
+['P.H. Trinity Tower','El Carmen',26,8.99248,-79.524722,[[-79.52458,8.99268],[-79.5248,8.99211],[-79.52488,8.99214],[-79.52489,8.99223],[-79.52475,8.9926],[-79.5247,8.99272],[-79.5246,8.99268],[-79.52458,8.99268]]],
+['P.H. Roca Mar','La Cresta',25,8.97407,-79.529376,[[-79.52951,8.97399],[-79.52924,8.97392],[-79.52917,8.97418],[-79.52944,8.97426],[-79.52951,8.97399]]],
+['Tower Bank','Marbella',25,8.98066,-79.523927,[[-79.52397,8.98092],[-79.52418,8.98079],[-79.52386,8.98027],[-79.52365,8.9804],[-79.52397,8.98092]]],
+['Infinity Towers','San Francisco',25,8.990979,-79.506572,[[-79.50641,8.99112],[-79.50636,8.99085],[-79.50681,8.99076],[-79.50686,8.99103],[-79.50641,8.99112]]],
+['Majestic Gardens 200','El Cangrejo',25,8.993012,-79.532752,[[-79.53283,8.99281],[-79.53292,8.99311],[-79.53292,8.99312],[-79.5327,8.99319],[-79.53257,8.99313],[-79.5325,8.99291],[-79.53283,8.99281]]],
+['Vivendi 100','El Cangrejo',25,8.995429,-79.530626,[[-79.53061,8.99532],[-79.53077,8.99544],[-79.53065,8.99559],[-79.53049,8.99547],[-79.53061,8.99532]]],
+['Vivendi 200','El Cangrejo',25,8.995211,-79.530333,[[-79.53044,8.99526],[-79.53039,8.99529],[-79.53035,8.99528],[-79.53022,8.99527],[-79.53022,8.99518],[-79.53024,8.99512],[-79.53028,8.9951],[-79.53031,8.99508],[-79.53043,8.99521],[-79.53044,8.99526]]],
+['Soho Tower','Costa del Este',25,9.016542,-79.463555,[[-79.46347,9.01669],[-79.46374,9.01665],[-79.46368,9.01631],[-79.46341,9.01635],[-79.46347,9.01669]]],
+['PH 43 GV','La Cresta',25,8.97431,-79.530051,[[-79.53016,8.97444],[-79.52983,8.97436],[-79.52988,8.97412],[-79.53022,8.9742],[-79.53016,8.97444]]],
+['P.H. Costa Real Tower','Costa del Este',25,9.015615,-79.471383,[[-79.47122,9.01548],[-79.47128,9.0159],[-79.47147,9.01587],[-79.47143,9.01563],[-79.47145,9.01563],[-79.47144,9.01555],[-79.47148,9.01554],[-79.47147,9.01544],[-79.47122,9.01548]]],
+['Vivendi 300','El Cangrejo',25,8.99501,-79.530074,[[-79.53001,8.99491],[-79.52999,8.99496],[-79.53,8.995],[-79.53002,8.99512],[-79.53011,8.99512],[-79.53018,8.99509],[-79.53019,8.99505],[-79.53021,8.99502],[-79.53006,8.99491],[-79.53001,8.99491]]],
+['Vivendi 400','El Cangrejo',25,8.994725,-79.529812,[[-79.5299,8.9948],[-79.52985,8.99481],[-79.52982,8.9948],[-79.52969,8.99476],[-79.5297,8.99467],[-79.52974,8.99461],[-79.52978,8.99461],[-79.52982,8.99459],[-79.52991,8.99475],[-79.5299,8.9948]]],
+['P.H. MidPark','Vista Hermosa',25,9.002182,-79.514902,[[-79.51509,9.0021],[-79.51507,9.00209],[-79.51508,9.00207],[-79.51491,9.00197],[-79.5149,9.00198],[-79.51487,9.00196],[-79.51444,9.00261],[-79.51466,9.00276],[-79.51509,9.0021]]],
+['Terrazas del Cangrejo','El Cangrejo',25,8.988638,-79.529958,[[-79.53002,8.98846],[-79.53018,8.98873],[-79.52986,8.98891],[-79.52971,8.98863],[-79.53002,8.98846]]],
+['P.H. Portanova','El Cangrejo',25,8.990132,-79.529589,[[-79.52964,8.98991],[-79.52935,8.99018],[-79.52938,8.99021],[-79.52949,8.99035],[-79.52956,8.99028],[-79.52967,8.99023],[-79.52965,8.9902],[-79.52981,8.99004],[-79.5297,8.98993],[-79.52964,8.98991]]],
+['Torre La Cresta','La Cresta',25,8.9796,-79.533822,[[-79.53364,8.97969],[-79.53353,8.97947],[-79.53392,8.97942],[-79.53392,8.9795],[-79.53393,8.97957],[-79.53394,8.97957],[-79.53389,8.97968],[-79.53389,8.97967],[-79.53374,8.97969],[-79.53364,8.97969]]],
+['P.H. Pacific Park','La Cresta',25,8.97636,-79.527992,[[-79.52828,8.97633],[-79.52791,8.97613],[-79.52789,8.97615],[-79.52771,8.97647],[-79.52771,8.97648],[-79.52792,8.97659],[-79.52824,8.97639],[-79.52828,8.97633]]],
+['P.H. El Alcazar','La Cresta',24,8.981083,-79.530147,[[-79.53025,8.98119],[-79.53017,8.98118],[-79.53015,8.98117],[-79.53013,8.98109],[-79.53012,8.98117],[-79.53011,8.98117],[-79.53005,8.98095],[-79.53002,8.98095],[-79.5303,8.98086],[-79.53025,8.98119]]],
+['P.H. Vista Tower','Bella Vista',24,8.980179,-79.526649,[[-79.52675,8.98031],[-79.52667,8.97995],[-79.5265,8.97998],[-79.52657,8.98034],[-79.52675,8.98031]]],
+['Mediterrané','Punta Paitilla',24,8.972206,-79.516998,[[-79.51707,8.97229],[-79.51687,8.9723],[-79.51686,8.97213],[-79.51705,8.97212],[-79.51706,8.97211],[-79.51707,8.97229]]],
+['P.H. Bay View','Santa Ana',24,8.960381,-79.538354,[[-79.53891,8.9604],[-79.53855,8.96065],[-79.53819,8.96091],[-79.5381,8.96037],[-79.53814,8.96031],[-79.53822,8.96031],[-79.53831,8.96023],[-79.53831,8.96019],[-79.53839,8.96017],[-79.53891,8.9604]]],
+['Royal Pacific','Punta Pacífica',24,8.981585,-79.508041,[[-79.50801,8.98176],[-79.50808,8.98175],[-79.5082,8.98166],[-79.50819,8.98159],[-79.50809,8.98143],[-79.50803,8.98143],[-79.50793,8.98149],[-79.50792,8.98151],[-79.5079,8.98159],[-79.50801,8.98176]]],
+['Torre Davivienda','Marbella',24,8.976157,-79.524555,[[-79.52471,8.97622],[-79.52466,8.97599],[-79.52432,8.97606],[-79.52437,8.97629],[-79.52471,8.97622]]],
+['P.H. Coco Bay','Coco del Mar',24,9.002571,-79.495551,[[-79.49567,9.00251],[-79.4955,9.00242],[-79.49538,9.00266],[-79.49555,9.00275],[-79.49567,9.00251]]],
+['P.H. Torre Delta','Vista Hermosa',24,8.998511,-79.520452,[[-79.52036,8.99869],[-79.52035,8.99855],[-79.52034,8.99841],[-79.52034,8.99828],[-79.52063,8.99826],[-79.52063,8.99837],[-79.52065,8.99867],[-79.52041,8.99868],[-79.52036,8.99869]]],
+['P.H. Aurora Tower','El Cangrejo',24,8.986589,-79.528879,[[-79.52901,8.98678],[-79.52864,8.98653],[-79.52874,8.98639],[-79.52886,8.98647],[-79.52902,8.98658],[-79.52901,8.98678]]],
+['Ph Versalles','Marbella',23,8.976989,-79.526713,[[-79.52685,8.97702],[-79.5268,8.97683],[-79.52667,8.97685],[-79.52668,8.97693],[-79.52664,8.97699],[-79.52656,8.97702],[-79.52658,8.97713],[-79.52678,8.97711],[-79.52685,8.97702]]],
+['Tower One','Marbella',23,8.976497,-79.524979,[[-79.52511,8.9766],[-79.52505,8.97628],[-79.52478,8.97634],[-79.52484,8.97666],[-79.52511,8.9766]]],
+['Plaza 2000','Marbella',23,8.98146,-79.520544,[[-79.52051,8.98163],[-79.52042,8.98148],[-79.52047,8.98145],[-79.52044,8.9814],[-79.52057,8.98133],[-79.52059,8.98137],[-79.52065,8.98135],[-79.52073,8.9815],[-79.52051,8.98163]]],
+['P.H. Del Rey','Bella Vista',23,8.985071,-79.530159,[[-79.52997,8.98502],[-79.53025,8.98484],[-79.53045,8.98515],[-79.53016,8.98533],[-79.52997,8.98502]]],
+['Propiedad Horizontal Quartier 74','San Francisco',23,8.994714,-79.505706,[[-79.50587,8.99475],[-79.50583,8.99458],[-79.50546,8.99465],[-79.5055,8.99483],[-79.50587,8.99475]]],
+['P.H. Parques del Carmen','El Carmen',23,8.995442,-79.525681,[[-79.52586,8.99545],[-79.5257,8.99561],[-79.52555,8.99546],[-79.52557,8.99544],[-79.52554,8.99542],[-79.52568,8.99527],[-79.52586,8.99545]]],
+['P.H. Da Vinci','Coco del Mar',23,8.992781,-79.498185,[[-79.49808,8.99263],[-79.49812,8.99262],[-79.49831,8.99259],[-79.49838,8.99299],[-79.49816,8.99303],[-79.49815,8.99297],[-79.49808,8.99263]]],
+['P.H. Palma de Mallorca','Coco del Mar',23,8.991264,-79.50097,[[-79.50109,8.99147],[-79.50104,8.99121],[-79.50101,8.99104],[-79.50083,8.99107],[-79.50083,8.99109],[-79.50091,8.9915],[-79.50109,8.99147]]],
+['P.H. Horizonte','Coco del Mar',23,8.990551,-79.498153,[[-79.49815,8.99083],[-79.49814,8.99082],[-79.49808,8.99052],[-79.49805,8.99036],[-79.49802,8.9902],[-79.49817,8.99017],[-79.49823,8.99049],[-79.49824,8.99049],[-79.49831,8.9908],[-79.49815,8.99083]]],
+['P.H. Vistanova','El Cangrejo',23,8.989868,-79.529305,[[-79.52952,8.9897],[-79.52929,8.98973],[-79.52927,8.98976],[-79.52917,8.9899],[-79.52917,8.98998],[-79.52927,8.99009],[-79.52934,8.99002],[-79.52934,8.98987],[-79.52934,8.98983],[-79.52952,8.9897]]],
+['P.H. Miró','Bella Vista',23,8.984814,-79.529357,[[-79.52928,8.98509],[-79.52916,8.9849],[-79.52908,8.98478],[-79.52925,8.98467],[-79.52945,8.98455],[-79.52946,8.98456],[-79.52963,8.98483],[-79.52964,8.98485],[-79.52928,8.98509]]],
+['P.H. Sky Swiss','Bella Vista',23,8.986298,-79.528382,[[-79.52855,8.98633],[-79.52823,8.98611],[-79.52813,8.98626],[-79.52845,8.98647],[-79.52855,8.98633]]],
+['P.H. El Cenit','La Cresta',22,8.981026,-79.530923,[[-79.53106,8.98102],[-79.531,8.98106],[-79.53099,8.98104],[-79.53096,8.98109],[-79.5309,8.98113],[-79.53087,8.9811],[-79.53079,8.98099],[-79.53084,8.98094],[-79.53087,8.98095],[-79.53106,8.98102]]],
+['Galeria Uno','Obarrio',22,8.983011,-79.520518,[[-79.52059,8.98284],[-79.52075,8.98308],[-79.5204,8.98328],[-79.52025,8.98303],[-79.52059,8.98284]]],
+['P.H. Mediterráneo Loft','El Cangrejo',22,8.98872,-79.526037,[[-79.52605,8.98893],[-79.52614,8.98854],[-79.52613,8.98854],[-79.52597,8.9885],[-79.52588,8.98888],[-79.52605,8.98893]]],
+['P.H. Imperial Tower','Costa del Este',22,9.015458,-79.472562,[[-79.4726,9.01528],[-79.4724,9.01531],[-79.47247,9.0157],[-79.47266,9.01567],[-79.47264,9.01552],[-79.4726,9.01528]]],
+['P.H. Cangrejo 507','El Cangrejo',22,8.989263,-79.524119,[[-79.52416,8.98935],[-79.52415,8.98939],[-79.52394,8.98936],[-79.52398,8.989],[-79.52424,8.98903],[-79.5242,8.98935],[-79.52416,8.98935]]],
+['Propiedad Horizontal Torres de San Francisco','San Francisco',22,8.994124,-79.506171,[[-79.50637,8.99412],[-79.5059,8.99423],[-79.50588,8.99412],[-79.50634,8.99402],[-79.50637,8.99412]]],
+['P.H. Kubic','El Cangrejo',22,8.990063,-79.525376,[[-79.52561,8.98985],[-79.52555,8.99038],[-79.52525,8.99035],[-79.52527,8.99019],[-79.52522,8.99019],[-79.52525,8.98997],[-79.5253,8.98998],[-79.52532,8.98981],[-79.52561,8.98985]]],
+['P.H. Velure','Bella Vista',22,8.985645,-79.530607,[[-79.53064,8.98545],[-79.53084,8.98576],[-79.53056,8.98594],[-79.53036,8.98563],[-79.53064,8.98545]]],
+['P.H. Mont Royale','El Cangrejo',22,8.989894,-79.530665,[[-79.53046,8.98981],[-79.53067,8.99014],[-79.53087,8.99024],[-79.53098,8.99005],[-79.53071,8.98964],[-79.53067,8.98967],[-79.53049,8.98979],[-79.53046,8.98981]]],
+['P.H. Miranda','La Cresta',22,8.978216,-79.533087,[[-79.53304,8.97855],[-79.53276,8.97805],[-79.53312,8.97778],[-79.53323,8.97784],[-79.53312,8.97811],[-79.53311,8.9783],[-79.53311,8.97834],[-79.53312,8.97836],[-79.53313,8.97843],[-79.53304,8.97855]]],
+['Majestic Gardens 100','El Cangrejo',21,8.992888,-79.533001,[[-79.53283,8.99281],[-79.53323,8.99269],[-79.53321,8.99302],[-79.53292,8.99311],[-79.53283,8.99281]]],
+['Plaza del Este','Costa del Este',21,9.013271,-79.476065,[[-79.47593,9.01379],[-79.47573,9.01369],[-79.4762,9.01248],[-79.47655,9.0126],[-79.47593,9.01379]]],
+['P.H. Lexus Tower','Coco del Mar',21,8.994607,-79.499961,[[-79.49984,8.99452],[-79.50007,8.99447],[-79.50008,8.99447],[-79.50015,8.99482],[-79.49991,8.99487],[-79.49984,8.99457],[-79.49984,8.99452]]],
+['P.H. BUONA VISTA','Vista Hermosa',21,8.99824,-79.515407,[[-79.51555,8.99846],[-79.51566,8.99829],[-79.51538,8.99812],[-79.51533,8.99807],[-79.5153,8.9981],[-79.51528,8.99815],[-79.51528,8.99815],[-79.51534,8.99835],[-79.51555,8.99846]]],
+['P.H. Las Palmeras','La Cresta',21,8.977132,-79.527443,[[-79.52756,8.97711],[-79.52752,8.97704],[-79.52749,8.97704],[-79.52738,8.9771],[-79.5273,8.97712],[-79.52734,8.97719],[-79.52737,8.97722],[-79.52742,8.97719],[-79.52752,8.97718],[-79.52756,8.97711]]],
+['Plaza Paitilla Inn','Punta Paitilla',20,8.973513,-79.51657,[[-79.51642,8.97336],[-79.51641,8.97347],[-79.51643,8.97363],[-79.51651,8.9737],[-79.51667,8.97369],[-79.51674,8.9736],[-79.51674,8.97347],[-79.51669,8.9734],[-79.51656,8.97337],[-79.51642,8.97336]]],
+['P.H. Bella Vista Gardens','La Cresta',20,8.979192,-79.530657,[[-79.53035,8.97917],[-79.53098,8.97896],[-79.53111,8.97922],[-79.53049,8.97944],[-79.53035,8.97917]]],
+['P.H. Bella Vista','La Cresta',20,8.976497,-79.534502,[[-79.53445,8.97632],[-79.53469,8.97639],[-79.53466,8.97649],[-79.53461,8.97665],[-79.53451,8.97662],[-79.53447,8.97658],[-79.53446,8.9766],[-79.53436,8.97657],[-79.53441,8.97641],[-79.53445,8.97632]]],
+['P.H. Cristal Park','El Cangrejo',20,8.988429,-79.52941,[[-79.52925,8.98839],[-79.52931,8.98836],[-79.52943,8.98829],[-79.5295,8.98826],[-79.52968,8.98859],[-79.52944,8.98872],[-79.52925,8.98839]]],
+['Oceania 100','El Cangrejo',20,8.992437,-79.531533,[[-79.53159,8.99218],[-79.53149,8.99224],[-79.53151,8.99228],[-79.53144,8.99236],[-79.53139,8.99239],[-79.53134,8.99241],[-79.53153,8.99277],[-79.53166,8.9927],[-79.53175,8.99272],[-79.53159,8.99218]]],
+['Oceania 200','El Cangrejo',20,8.992813,-79.531409,[[-79.53156,8.99282],[-79.53153,8.99277],[-79.53124,8.99255],[-79.53115,8.99271],[-79.53133,8.99304],[-79.53141,8.99299],[-79.53141,8.99291],[-79.53143,8.99287],[-79.5315,8.99282],[-79.53156,8.99282]]],
+['The Westin Panama','Costa del Este',20,9.00976,-79.475091,[[-79.47526,9.00992],[-79.4752,9.00993],[-79.47503,9.00998],[-79.47496,9.00999],[-79.47484,9.00955],[-79.47491,9.00953],[-79.47508,9.00949],[-79.47514,9.00947],[-79.47523,9.00983],[-79.47526,9.00992]]],
+['P.H. Metro Tower','Vista Hermosa',20,8.997803,-79.517148,[[-79.51703,8.99783],[-79.51705,8.9978],[-79.51713,8.99768],[-79.51714,8.99767],[-79.51738,8.99783],[-79.51727,8.99799],[-79.51703,8.99783]]],
+['P.H. Innova Tower','Vista Hermosa',20,9.004625,-79.517885,[[-79.51777,9.00472],[-79.51796,9.00478],[-79.51806,9.00449],[-79.51787,9.00442],[-79.51777,9.00472]]],
+['PH El Marquéz','Vista Hermosa',20,9.001673,-79.517174,[[-79.51732,9.00189],[-79.51715,9.00182],[-79.51714,9.00182],[-79.51706,9.00175],[-79.51708,9.00172],[-79.51711,9.00165],[-79.51715,9.00157],[-79.5172,9.00148],[-79.51723,9.00142],[-79.51732,9.00189]]],
+['Oceanía Business Plaza','Punta Pacífica',20,8.980698,-79.509825,[[-79.51011,8.98034],[-79.51035,8.98114],[-79.50976,8.98132],[-79.50956,8.98073],[-79.50959,8.98065],[-79.50959,8.98056],[-79.50954,8.9805],[-79.51011,8.98034]]],
+['P.H. 44 & Park','La Cresta',20,8.975964,-79.529655,[[-79.52975,8.97586],[-79.52971,8.97585],[-79.52949,8.9758],[-79.52942,8.97609],[-79.52967,8.97615],[-79.52968,8.97611],[-79.52971,8.97601],[-79.52972,8.97596],[-79.52975,8.97586]]],
+['P.H. Lemon Tower','La Cresta',20,8.978101,-79.529586,[[-79.52973,8.97817],[-79.52947,8.97823],[-79.52943,8.97824],[-79.52937,8.978],[-79.52968,8.97793],[-79.52968,8.97796],[-79.52973,8.97817]]],
+['P.H. Elite','La Cresta',20,8.979981,-79.533538,[[-79.53368,8.98004],[-79.53336,8.98018],[-79.53334,8.97989],[-79.53358,8.97987],[-79.53359,8.97987],[-79.53368,8.98004]]],
+['P.H. Hills Tower','Vista Hermosa',20,9.004349,-79.516233,[[-79.51609,9.00437],[-79.51625,9.00416],[-79.51645,9.00431],[-79.51628,9.00452],[-79.51609,9.00437]]],
+['P.H. Metropolis','La Cresta',20,8.982368,-79.52937,[[-79.52935,8.98262],[-79.52912,8.98243],[-79.52939,8.98212],[-79.52939,8.98211],[-79.52962,8.9823],[-79.52935,8.98262]]],
+['P.H. Carmel','El Carmen',19,8.993464,-79.522506,[[-79.52259,8.99343],[-79.52251,8.99336],[-79.52247,8.99341],[-79.52242,8.99344],[-79.52245,8.99346],[-79.52241,8.99351],[-79.52252,8.99352],[-79.52254,8.99353],[-79.52257,8.99349],[-79.52259,8.99343]]],
+['Marinn Place Financial District','Bella Vista',19,8.981849,-79.525988,[[-79.52581,8.98188],[-79.52591,8.98177],[-79.52599,8.98167],[-79.52619,8.98184],[-79.52618,8.98185],[-79.52602,8.98205],[-79.52581,8.98188]]],
+['Hyatt Regency Panama City','Bella Vista',19,8.981561,-79.524381,[[-79.52458,8.98167],[-79.52421,8.98128],[-79.52409,8.9814],[-79.52445,8.98179],[-79.52458,8.98167]]],
+['PH Elmare Torre 5000','El Cangrejo',19,8.994921,-79.53219,[[-79.53234,8.99486],[-79.53222,8.99486],[-79.53214,8.99489],[-79.53207,8.99487],[-79.53203,8.99496],[-79.53207,8.99496],[-79.5321,8.99504],[-79.53228,8.99494],[-79.53231,8.99495],[-79.53234,8.99486]]],
+['P.H. Park City','El Cangrejo',19,8.990036,-79.526502,[[-79.52661,8.99017],[-79.52661,8.99016],[-79.52665,8.99009],[-79.5267,8.99002],[-79.52639,8.98984],[-79.52634,8.98991],[-79.52631,8.98998],[-79.5263,8.98999],[-79.52661,8.99017]]],
+['P.H. Porto Bello','El Cangrejo',19,8.990388,-79.523906,[[-79.52406,8.99047],[-79.52408,8.99028],[-79.52375,8.99024],[-79.52372,8.99043],[-79.52376,8.99043],[-79.52406,8.99047]]],
+['P.H. Zaphiro','El Cangrejo',19,8.9898,-79.524497,[[-79.52471,8.98973],[-79.52469,8.98991],[-79.52461,8.9899],[-79.5243,8.98987],[-79.5243,8.98985],[-79.52432,8.98971],[-79.52433,8.98969],[-79.52471,8.98973]]],
+['PH Elmare Torre 6000','El Cangrejo',19,8.994934,-79.531833,[[-79.53198,8.99489],[-79.53187,8.99488],[-79.53178,8.99489],[-79.53171,8.99487],[-79.53166,8.99496],[-79.53171,8.99496],[-79.53173,8.99504],[-79.53192,8.99496],[-79.53195,8.99497],[-79.53198,8.99489]]],
+['PH Elmare Torre 7000','El Cangrejo',19,8.994902,-79.531475,[[-79.53163,8.99487],[-79.53151,8.99485],[-79.53143,8.99486],[-79.53136,8.99483],[-79.53131,8.99492],[-79.53135,8.99492],[-79.53136,8.995],[-79.53156,8.99494],[-79.53159,8.99495],[-79.53163,8.99487]]],
+['P.H. Condado Plaza','El Cangrejo',19,8.991884,-79.525008,[[-79.52503,8.99208],[-79.52487,8.99201],[-79.5249,8.99193],[-79.525,8.9917],[-79.52502,8.99166],[-79.52519,8.99173],[-79.52503,8.99208]]],
+['Contraloría General de la República','Marbella',18,8.975737,-79.526125,[[-79.52627,8.97563],[-79.52612,8.97566],[-79.52613,8.9757],[-79.52607,8.97567],[-79.52593,8.9757],[-79.52596,8.97586],[-79.5261,8.9758],[-79.52614,8.97579],[-79.52615,8.97583],[-79.52627,8.97563]]],
+['Ministerio de Economia y Finanzas','La Cresta',18,8.979727,-79.528881,[[-79.52901,8.97964],[-79.52902,8.97973],[-79.52871,8.97996],[-79.52865,8.97967],[-79.52901,8.97964]]],
+['P.H. Cangrejo Bay','El Cangrejo',18,8.992284,-79.525133,[[-79.52528,8.99223],[-79.52502,8.99212],[-79.52492,8.99237],[-79.52517,8.99247],[-79.52528,8.99223]]],
+['P.H. Torre Banco General','Marbella',18,8.977112,-79.522188,[[-79.52216,8.97681],[-79.52237,8.9771],[-79.52234,8.97711],[-79.52233,8.97715],[-79.52235,8.97718],[-79.52234,8.97719],[-79.52227,8.97722],[-79.5219,8.97735],[-79.52177,8.97713],[-79.52216,8.97681]]],
+['Twin Towers','Marbella',18,8.976547,-79.524398,[[-79.52428,8.97675],[-79.52465,8.97667],[-79.52458,8.97633],[-79.52439,8.97637],[-79.52421,8.97641],[-79.52428,8.97675]]],
+['P.H. Dream Plaza','Costa del Este',18,9.016557,-79.470389,[[-79.46983,9.01688],[-79.46982,9.01682],[-79.46977,9.01647],[-79.47035,9.01638],[-79.47079,9.01632],[-79.471,9.01629],[-79.47103,9.01628],[-79.47109,9.01669],[-79.46983,9.01688]]],
+['P.H. Mandalay Apartments','El Cangrejo',18,8.988262,-79.525894,[[-79.52587,8.98809],[-79.52602,8.98814],[-79.52601,8.98817],[-79.52598,8.98825],[-79.52594,8.98837],[-79.5259,8.98848],[-79.52583,8.98846],[-79.52574,8.98842],[-79.52584,8.98812],[-79.52587,8.98809]]],
+['P.H. Scala','El Carmen',18,8.997527,-79.523759,[[-79.52387,8.99753],[-79.52367,8.99733],[-79.52354,8.99746],[-79.52374,8.99766],[-79.52376,8.99765],[-79.52386,8.99754],[-79.52387,8.99753]]],
+['Torre Andaluz','El Cangrejo',18,8.99233,-79.526005,[[-79.52602,8.99212],[-79.52582,8.99258],[-79.52598,8.99265],[-79.52618,8.99218],[-79.52602,8.99212]]],
+['P.H. Vita Bella','El Cangrejo',18,8.988625,-79.531686,[[-79.53179,8.98873],[-79.53148,8.98864],[-79.53153,8.98846],[-79.53185,8.98856],[-79.53179,8.98873]]],
+['Ultramar Plaza','Marbella',17,8.97745,-79.521164,[[-79.52113,8.97732],[-79.52111,8.97733],[-79.5211,8.9774],[-79.52107,8.97743],[-79.52106,8.97749],[-79.52118,8.97758],[-79.52125,8.97753],[-79.52126,8.9775],[-79.52128,8.97747],[-79.52113,8.97732]]],
+['Vista Bella Plaza','Marbella',17,8.97723,-79.519962,[[-79.52015,8.97723],[-79.52008,8.97719],[-79.52008,8.97721],[-79.51988,8.97718],[-79.51988,8.97717],[-79.51979,8.97727],[-79.51983,8.97727],[-79.51991,8.97726],[-79.52002,8.97727],[-79.52015,8.97723]]],
+['P.H. San Marino','Bella Vista',17,8.985671,-79.528905,[[-79.52905,8.98562],[-79.52892,8.98551],[-79.52864,8.98572],[-79.52887,8.98587],[-79.52905,8.98562]]],
+['PH Elmare Torre 4000','El Cangrejo',17,8.994755,-79.53255,[[-79.53262,8.99462],[-79.53261,8.99462],[-79.53257,8.99465],[-79.53243,8.99478],[-79.53241,8.99482],[-79.53248,8.99483],[-79.53257,8.99486],[-79.53266,8.99481],[-79.53268,8.99476],[-79.53262,8.99462]]],
+['Aloft Panama','San Francisco',17,8.989799,-79.501907,[[-79.5024,8.99008],[-79.50227,8.98944],[-79.50208,8.98953],[-79.50204,8.98958],[-79.50203,8.98966],[-79.50189,8.98978],[-79.50157,8.98984],[-79.50153,8.9899],[-79.50162,8.99014],[-79.5024,8.99008]]],
+['Sheraton Grand Panama','San Francisco',17,8.989294,-79.50162,[[-79.50158,8.98956],[-79.5018,8.98952],[-79.50168,8.9889],[-79.50147,8.98893],[-79.50158,8.98956]]],
+['PH Elmare Torre 3000','El Cangrejo',17,8.994517,-79.532811,[[-79.53288,8.99438],[-79.53287,8.99439],[-79.53283,8.99441],[-79.53269,8.99454],[-79.53267,8.99458],[-79.53274,8.99459],[-79.53283,8.99463],[-79.53292,8.99457],[-79.53294,8.99452],[-79.53288,8.99438]]],
+['PH Elmare Torre 2000','El Cangrejo',17,8.994108,-79.53299,[[-79.53297,8.99396],[-79.53296,8.99397],[-79.53295,8.99401],[-79.53291,8.9942],[-79.53291,8.99424],[-79.53297,8.99421],[-79.53307,8.99419],[-79.53311,8.99409],[-79.5331,8.99404],[-79.53297,8.99396]]],
+['PH Elmare Torre 1000','El Cangrejo',17,8.993773,-79.533067,[[-79.53305,8.99362],[-79.53304,8.99363],[-79.53302,8.99367],[-79.53299,8.99386],[-79.53299,8.9939],[-79.53305,8.99387],[-79.53314,8.99385],[-79.53318,8.99376],[-79.53318,8.99371],[-79.53305,8.99362]]],
+['Torres Belview 500','El Cangrejo',17,8.994027,-79.531026,[[-79.53103,8.99419],[-79.53123,8.99395],[-79.53102,8.99378],[-79.53082,8.99402],[-79.53103,8.99419]]],
+['Torres Belview 400','El Cangrejo',17,8.994228,-79.531304,[[-79.53103,8.99419],[-79.53124,8.99436],[-79.53128,8.99431],[-79.53135,8.99422],[-79.53141,8.99427],[-79.53141,8.99432],[-79.53163,8.99433],[-79.53144,8.99412],[-79.53123,8.99395],[-79.53103,8.99419]]],
+['P.H. Andros Tower','El Carmen',17,8.993069,-79.524311,[[-79.52437,8.9932],[-79.52447,8.99292],[-79.52429,8.99284],[-79.52416,8.99311],[-79.52421,8.99314],[-79.52437,8.9932]]],
+['P.H. Trio','El Carmen',16,8.994459,-79.5202,[[-79.52024,8.99455],[-79.51999,8.9944],[-79.52006,8.99429],[-79.52031,8.99444],[-79.5203,8.99446],[-79.52026,8.99453],[-79.52024,8.99455]]],
+['Condominio Marbella','Marbella',16,8.977669,-79.521908,[[-79.52201,8.97754],[-79.52199,8.97754],[-79.5218,8.97761],[-79.52169,8.97765],[-79.52176,8.97783],[-79.52187,8.97779],[-79.52193,8.9777],[-79.52195,8.97776],[-79.52204,8.97766],[-79.52201,8.97754]]],
+['P.H. Centrum Tower','Bella Vista',16,8.982265,-79.529104,[[-79.52939,8.98212],[-79.52918,8.98195],[-79.52891,8.98226],[-79.52891,8.98228],[-79.52893,8.98228],[-79.52901,8.98236],[-79.5291,8.98241],[-79.5291,8.98243],[-79.52912,8.98243],[-79.52939,8.98212]]],
+['P.H. Argentina Tower','El Cangrejo',16,8.988198,-79.529753,[[-79.52965,8.98815],[-79.52979,8.98807],[-79.5299,8.98827],[-79.52976,8.98835],[-79.52965,8.98815]]],
+['Edificio 24 de Diciembre','El Chorrillo',16,8.95029,-79.54759,[[-79.54774,8.95057],[-79.54752,8.95055],[-79.54763,8.95048],[-79.5473,8.95038],[-79.54766,8.95016],[-79.54767,8.95007],[-79.54756,8.94996],[-79.54776,8.95026],[-79.54743,8.9503],[-79.54774,8.95057]]],
+['Novotel Panama City','El Cangrejo',16,8.990913,-79.523784,[[-79.52399,8.99083],[-79.52399,8.99103],[-79.52388,8.99101],[-79.52383,8.99099],[-79.52378,8.99096],[-79.52374,8.99093],[-79.52368,8.9909],[-79.52362,8.99085],[-79.52358,8.9908],[-79.52399,8.99083]]],
+['P.H. Crystal','El Cangrejo',16,8.987891,-79.528271,[[-79.52829,8.98772],[-79.52838,8.98788],[-79.52834,8.98791],[-79.52831,8.98789],[-79.52834,8.98794],[-79.52827,8.98798],[-79.52822,8.98794],[-79.52824,8.98796],[-79.52819,8.98799],[-79.52829,8.98772]]],
+['Torres Belview 300','El Cangrejo',16,8.994485,-79.531573,[[-79.53167,8.99465],[-79.53169,8.99434],[-79.53163,8.99433],[-79.53141,8.99432],[-79.53139,8.99463],[-79.53167,8.99465]]],
+['Torres Belview 200','El Cangrejo',16,8.994521,-79.531821,[[-79.53167,8.99465],[-79.53186,8.99466],[-79.532,8.99464],[-79.53197,8.99435],[-79.53189,8.99436],[-79.53169,8.99434],[-79.53167,8.99465]]],
+['Torres Belview 100','El Cangrejo',16,8.994409,-79.532253,[[-79.53197,8.99435],[-79.53221,8.99433],[-79.53244,8.99426],[-79.53252,8.99432],[-79.53247,8.99438],[-79.53243,8.9944],[-79.53224,8.99444],[-79.53226,8.99461],[-79.532,8.99464],[-79.53197,8.99435]]],
+['Embassy of the People\'s Republic of China in Panama','Coco del Mar',16,8.994692,-79.499724,[[-79.49964,8.99492],[-79.49959,8.99462],[-79.49958,8.99457],[-79.49976,8.99454],[-79.49984,8.99452],[-79.49984,8.99457],[-79.49991,8.99487],[-79.49964,8.99492]]],
+['P.H. Coral Bay','San Francisco',16,8.990398,-79.501348,[[-79.50129,8.99053],[-79.50145,8.99049],[-79.50142,8.99035],[-79.5014,8.99037],[-79.50138,8.99036],[-79.50133,8.99036],[-79.50131,8.99038],[-79.50129,8.99037],[-79.50127,8.99037],[-79.50129,8.99053]]],
+['P.H. Aileen','El Carmen',16,8.993721,-79.52494,[[-79.52491,8.99382],[-79.52485,8.99379],[-79.52493,8.99359],[-79.52497,8.99361],[-79.52497,8.9936],[-79.52504,8.99363],[-79.52496,8.99383],[-79.52491,8.99381],[-79.52491,8.99382]]],
+['P.H. Aranjuez','El Cangrejo',16,8.9923,-79.526276,[[-79.5263,8.99243],[-79.52616,8.99237],[-79.52615,8.99236],[-79.52622,8.99221],[-79.52626,8.99221],[-79.52626,8.9922],[-79.52634,8.99224],[-79.52637,8.99227],[-79.52631,8.99243],[-79.5263,8.99243]]],
+['P.H. Dali Tower','El Cangrejo',16,8.988212,-79.531827,[[-79.53166,8.98812],[-79.53176,8.98813],[-79.5319,8.98813],[-79.53193,8.98815],[-79.53191,8.98819],[-79.5319,8.98826],[-79.53191,8.9883],[-79.53188,8.98831],[-79.53174,8.98829],[-79.53166,8.98812]]],
+['P.H. Del Caribe','Bella Vista',16,8.985753,-79.529398,[[-79.5294,8.98594],[-79.52923,8.98568],[-79.52923,8.98565],[-79.52947,8.98551],[-79.52965,8.98579],[-79.5294,8.98594]]],
+['P.H. Tabasara','El Carmen',15,8.993731,-79.522757,[[-79.52284,8.9937],[-79.52277,8.99363],[-79.52274,8.9936],[-79.52261,8.99372],[-79.52266,8.99376],[-79.52272,8.99383],[-79.52276,8.99378],[-79.52278,8.9938],[-79.52281,8.99376],[-79.52284,8.9937]]],
+['P.H. Tula','El Cangrejo',15,8.988221,-79.523383,[[-79.52361,8.98816],[-79.52335,8.98802],[-79.52333,8.98806],[-79.5232,8.98829],[-79.52316,8.98835],[-79.52342,8.9885],[-79.52361,8.98816]]],
+['Hilton Garden Inn Panama','Bella Vista',15,8.984426,-79.529254,[[-79.52943,8.98454],[-79.52927,8.98428],[-79.52924,8.98423],[-79.52906,8.98434],[-79.52909,8.9844],[-79.52925,8.98465],[-79.52943,8.98454]]],
+['Torre El Cangrejo','El Cangrejo',15,8.988115,-79.529933,[[-79.52984,8.98809],[-79.52987,8.98806],[-79.52992,8.98803],[-79.52997,8.98802],[-79.53,8.9881],[-79.53001,8.98812],[-79.53,8.98817],[-79.52993,8.98822],[-79.52988,8.98816],[-79.52984,8.98809]]],
+['Royal Center','Marbella',15,8.978006,-79.518715,[[-79.51881,8.97841],[-79.51884,8.97819],[-79.51884,8.9781],[-79.51882,8.97783],[-79.51868,8.97784],[-79.51854,8.9781],[-79.51845,8.97804],[-79.51847,8.97762],[-79.51901,8.97784],[-79.51881,8.97841]]],
+['P.H. St. Giorgio','Vista Hermosa',15,9.004528,-79.517492,[[-79.51739,9.00457],[-79.51749,9.00429],[-79.51767,9.00435],[-79.51757,9.00464],[-79.51754,9.00463],[-79.51747,9.0046],[-79.51741,9.00458],[-79.51739,9.00457]]],
+['P.H. Harmony','El Cangrejo',15,8.991459,-79.526521,[[-79.52666,8.99134],[-79.52648,8.99127],[-79.52632,8.99164],[-79.52649,8.99171],[-79.52666,8.99134]]],
+['P.H. Atrium','El Cangrejo',15,8.988007,-79.531787,[[-79.53191,8.98809],[-79.53158,8.98808],[-79.53158,8.98798],[-79.5317,8.98795],[-79.53171,8.98795],[-79.5318,8.98794],[-79.5318,8.98799],[-79.5319,8.98801],[-79.53191,8.98803],[-79.53191,8.98809]]],
+['P.H. Alfil','Marbella',15,8.978462,-79.520203,[[-79.52025,8.9787],[-79.51998,8.97849],[-79.52011,8.97836],[-79.52014,8.97838],[-79.5202,8.9784],[-79.5202,8.97842],[-79.52023,8.97842],[-79.52028,8.97845],[-79.52031,8.97849],[-79.52025,8.9787]]],
+['P.H. La Ribera','Costa del Este',15,9.010068,-79.469714,[[-79.46953,9.01045],[-79.46952,9.01006],[-79.46958,9.01006],[-79.46959,9.00993],[-79.46963,9.0099],[-79.4697,9.00986],[-79.46996,9.00985],[-79.47002,9.0099],[-79.46994,9.01017],[-79.46953,9.01045]]],
+['P.H. Mirador del Pacifico','Coco del Mar',15,8.991462,-79.497217,[[-79.49736,8.99136],[-79.49727,8.99127],[-79.49719,8.99134],[-79.49708,8.99146],[-79.49709,8.99162],[-79.49717,8.99154],[-79.49725,8.99157],[-79.49731,8.99152],[-79.49728,8.99147],[-79.49736,8.99136]]],
+['P.H. Prestanza','Coco del Mar',15,8.99763,-79.497385,[[-79.49745,8.99769],[-79.4973,8.99768],[-79.49731,8.99762],[-79.49728,8.99761],[-79.49729,8.99754],[-79.49747,8.99756],[-79.49746,8.99763],[-79.49745,8.99763],[-79.49745,8.99769]]],
+['P.H. Long Beach','Coco del Mar',15,8.997066,-79.49773,[[-79.49778,8.99726],[-79.49764,8.99709],[-79.49766,8.99697],[-79.49769,8.99696],[-79.49771,8.99703],[-79.49773,8.99707],[-79.49776,8.997],[-79.49782,8.99701],[-79.49779,8.99715],[-79.49778,8.99726]]],
+['Brisas del Carmen','El Carmen',15,8.994354,-79.520873,[[-79.52107,8.9944],[-79.52078,8.99423],[-79.52076,8.99426],[-79.52073,8.99431],[-79.5207,8.99435],[-79.521,8.99452],[-79.52107,8.9944]]],
+];
+
+const DISTRICT_BASE = {
+  'Punta Pacífica':{ppm2:2950,costM2:1390}, 'Punta Paitilla':{ppm2:2760,costM2:1300},
+  'Marbella':{ppm2:2620,costM2:1235},       'Costa del Este':{ppm2:2320,costM2:1075},
+  'Obarrio':{ppm2:2020,costM2:950},         'Bella Vista':{ppm2:1780,costM2:995},
+  'El Cangrejo':{ppm2:1820,costM2:940},     'San Francisco':{ppm2:2140,costM2:1015},
+  'Coco del Mar':{ppm2:2180,costM2:1030},   'La Cresta':{ppm2:1900,costM2:960},
+  'El Carmen':{ppm2:1860,costM2:945},       'Vista Hermosa':{ppm2:1700,costM2:915},
+  'Casco Antiguo':{ppm2:3080,costM2:1560},  'Santa Ana':{ppm2:1520,costM2:880},
+  'El Chorrillo':{ppm2:1350,costM2:840},
+  /* Portfolio districts with no OSM footprints of their own. The price bases
+     still matter: they seed the estimator when a context building is clicked
+     inside one of these areas. */
+  'Avenida Balboa':{ppm2:2880,costM2:1340},  'Santa María':{ppm2:2450,costM2:1120},
+  'Clayton':{ppm2:1980,costM2:985},          'Panamá Pacífico':{ppm2:1640,costM2:900},
+};
+const DEFAULT_BASE = {ppm2:1900,costM2:960};
+
+/* ---- the portfolio ----------------------------------------------------------
+   Only the eighteen promotions in the Aravena portfolio are modelled. The map
+   used to treat all 240 OSM buildings as owned assets, which made the ranking
+   list, the portfolio profit and the "rank 42 of 240" label describe a city,
+   not a portfolio. Everything not listed here is city context: grey, no
+   financial model, clickable to build an estimate — which is what the legend
+   said all along.
+
+   Rows are [id, name, district, floors, gdv, margin, stage]; every field comes
+   from the same portfolio.json the panel reads, so the two never disagree. */
+const CARTERA = [
+['CDE-01','Torre Norte','Costa del Este',32,57573750,0.3328,'En obra'],
+['CDE-02','Torre Sur','Costa del Este',28,45470720,0.3196,'Preventa'],
+['PPA-03','Mirador Pacífico','Punta Pacífica',41,87881200,0.3917,'En obra'],
+['PPA-04','Bahía Mar','Punta Pacífica',38,74742000,0.3755,'Diseño'],
+['OBA-05','Obarrio 55','Obarrio',24,41317260,0.2401,'En obra'],
+['OBA-06','Plaza Fontana','Obarrio',19,39144120,0.2746,'Permisos'],
+['SFR-07','Parque Central','San Francisco',26,47091800,0.2359,'Factibilidad'],
+['SFR-08','Altos del Parque','San Francisco',21,30005440,0.2644,'Preventa'],
+['BVI-09','Bella Vista 300','Bella Vista',23,30011810,0.2340,'En obra'],
+['BVI-10','Casa Marbella','Marbella',18,21203820,0.2588,'Entregado'],
+['BAL-11','Balboa Bay','Avenida Balboa',44,102840600,0.3900,'En obra'],
+['BAL-12','Cinta Costera 9','Avenida Balboa',35,77183200,0.3319,'Diseño'],
+['CDM-13','Coco del Mar','Coco del Mar',16,22788960,0.2154,'Preventa'],
+['STM-14','Santa María Green','Santa María',14,41287440,0.3165,'En obra'],
+['CLA-15','Clayton Park','Clayton',12,16644120,0.1599,'Factibilidad'],
+['PPC-16','Distrito Pacífico','Panamá Pacífico',20,31183200,0.1325,'Permisos'],
+['PPC-17','Terrazas del Sur','Panamá Pacífico',15,18552160,0.1705,'Entregado'],
+['CAS-18','Casco Lofts','Casco Antiguo',7,10324600,0.2219,'Diseño'],
+];
+
+/* Seven of the portfolio districts have no OSM footprints in this extract —
+   Avenida Balboa, Santa María, Clayton, Panamá Pacífico, Casco Antiguo. Each
+   borrows a footprint from the nearest district that does, in preference
+   order. A borrowed footprint is still a real building outline; only the
+   address is approximate, and that beats a box drawn from nothing. */
+const NEARBY = {
+  'Avenida Balboa':  ['Punta Paitilla','Bella Vista','Marbella'],
+  'Santa María':     ['Costa del Este','San Francisco'],
+  'Clayton':         ['El Carmen','Vista Hermosa','La Cresta'],
+  'Panamá Pacífico': ['La Cresta','El Chorrillo','Santa Ana'],
+  'Casco Antiguo':   ['Santa Ana','El Chorrillo'],
+};
+
+/* Pick the free footprint whose height is closest to the promotion's, so a
+   44-floor tower does not land on a 7-floor outline. */
+const TAKEN = new Set();
+function footprintFor(district, floors){
+  for(const d of [district, ...(NEARBY[district] || [])]){
+    let best = -1, gap = Infinity;
+    for(let i=0;i<OSM.length;i++){
+      if(TAKEN.has(i) || OSM[i][1] !== d) continue;
+      const g = Math.abs(OSM[i][2] - floors);
+      if(g < gap){ gap = g; best = i; }
+    }
+    if(best >= 0){ TAKEN.add(best); return OSM[best]; }
+  }
+  for(let i=0;i<OSM.length;i++) if(!TAKEN.has(i)){ TAKEN.add(i); return OSM[i]; }
+}
+
+const PROJECTS = CARTERA.map(([id,name,district,floors,gdv,margin,etapa],i)=>{
+  const seed = 7919 + i*131, r = rng(seed);
+  const b = DISTRICT_BASE[district] || DEFAULT_BASE;
+  const [,,,lat,lng,ring] = footprintFor(district, floors);
+  return {
+    id, name, district, etapa, lat, lng, ring, floors,
+    cols: floors>=40 ? 4 : 3, rows:2,
+    ppm2:   Math.round(b.ppm2   * (0.93 + r()*0.16)),
+    costM2: Math.round(b.costM2 * (0.94 + r()*0.13)),
+    /* `land` is not an input any more — it is solved from the target margin
+       in feas(). Kept as a floor so an estimate built from a context building,
+       which has no target, still has a land cost. */
+    land:   Math.round((floors*0.34 + 2.1) * (0.85 + r()*0.45) * 1e6),
+    targetGdv: gdv, targetMargin: margin,
+    /* Share of total cost that is land. Panama City waterfront runs land-heavy
+       and the suburbs do not, so it varies by promotion rather than sitting at
+       a single figure. */
+    landPct: +(0.15 + r()*0.11).toFixed(3),
+    softPct:+(0.11  + r()*0.07 ).toFixed(3),
+    finPct: +(0.045 + r()*0.025).toFixed(3),
+    launch:'2025-06', seed, age: 4 + Math.floor(r()*20),
+  };
+});
+
+const MONTHS = 30;                       // sales window modelled
+const TYPES = [
+  {k:'1BR', area:[62,78]}, {k:'2BR', area:[92,124]},
+  {k:'3BR', area:[136,168]}, {k:'PH', area:[210,290]},
+];
+
+function buildProject(p){
+  const r = rng(p.seed);
+  const perFloor = p.cols*p.rows;
+  const units = [];
+  const age = p.age ?? (6 + p.seed%12);
+  for(let f=1; f<=p.floors; f++){
+    const hi = f/p.floors;
+    for(let i=0;i<perFloor;i++){
+      const cx = i % p.cols, cz = (i/p.cols)|0;
+      const corner = (cx===0||cx===p.cols-1) && (cz===0||cz===p.rows-1);
+      const isPH  = f > p.floors-2;
+      const t = isPH ? TYPES[3] : corner ? TYPES[2] : (r()>.45 ? TYPES[1] : TYPES[0]);
+      const area = +(t.area[0] + r()*(t.area[1]-t.area[0])).toFixed(1);
+      const viewF = 1 + (corner?.06:0) + (cz===0?.045:0);
+      const floorF = 1 + hi*0.22 + (isPH?0.18:0);
+      const ppm2 = p.ppm2 * viewF * floorF * (0.97 + r()*0.06);
+      const price = Math.round(area*ppm2/500)*500;
+      const desirability = 0.55 + 0.45*(1-hi) + (corner?.08:0);
+      const soldBy = Math.round((1-desirability)*MONTHS + r()*10);
+      const status = soldBy <= age ? 'sold' : (soldBy <= age+3 && r()>.55 ? 'reserved' : 'available');
+      const month = status==='available' ? null : Math.max(0, Math.min(age, soldBy));
+      const disc = status==='sold' ? (r()*0.09) : 0;
+      units.push({
+        id:`${p.id}-${String(f).padStart(2,'0')}${String.fromCharCode(65+i)}`,
+        proj:p.id, floor:f, idx:i, cx, cz, type:t.k, area, ppm2, price,
+        status, month, net: Math.round(price*(1-disc)),
+        buyer: ['Local end-user','Investor (local)','Foreign investor','Corporate','Pre-sale VIP'][(r()*5)|0],
+        pay: ['Bank mortgage','Cash','Developer plan','Mortgage + trust'][(r()*4)|0],
+      });
+    }
+  }
+  return {...p, perFloor, units, age};
+}
+
+/* Two passes. The unit mix is generated from the tower's shape, so the gross
+   sales value it adds up to is whatever the shape happens to give; the second
+   pass rescales the price per m² by the ratio to the portfolio's real figure
+   and rebuilds. After it, the map's "gross sales value" is the panel's
+   `ventas` to within the 500-dollar rounding of individual unit prices. */
+function calibrate(p){
+  const built = buildProject(p);
+  if(!p.targetGdv) return built;
+  const gdv = built.units.reduce((a,u)=>a+u.price,0);
+  if(!gdv) return built;
+  return buildProject({...p, ppm2: p.ppm2 * (p.targetGdv/gdv)});
+}
+const DATA = PROJECTS.map(calibrate);
+const byId = new Map(DATA.map(p=>[p.id,p]));
+
+/* ---------- feasibility engine ---------- */
+function feas(p){
+  const u = p.units, n = u.length;
+  const sold = u.filter(x=>x.status==='sold'), resv = u.filter(x=>x.status==='reserved');
+  const sellableM2 = u.reduce((a,x)=>a+x.area,0);
+  const gdv  = u.reduce((a,x)=>a+x.price,0);
+  const contracted = sold.reduce((a,x)=>a+x.net,0) + resv.reduce((a,x)=>a+x.net,0);
+  /* Two ways of getting to the cost stack.
+     A context building clicked on the map has no target, so it is priced
+     bottom-up from the district's build cost.
+     A portfolio promotion has a margin that the panel already publishes, so
+     the stack is solved top-down from it: the total is fixed by the margin,
+     `landPct` splits it between land and construction, and the build cost per
+     m² comes out of the division. Solving only for land — the first attempt —
+     drove it negative on the towers, because the district build cost alone
+     already exceeded what the margin left. */
+  let hard, soft, fin, land;
+  if(p.targetMargin != null){
+    const objetivo = gdv * (1 - p.targetMargin);
+    const K = (1 + p.softPct) * (1 + p.finPct);
+    land = objetivo * p.landPct;
+    hard = (objetivo - land) / K;
+    soft = hard * p.softPct;
+    fin  = (hard + soft) * p.finPct;
+  } else {
+    hard = sellableM2*1.32*p.costM2;
+    soft = hard*p.softPct;
+    fin  = (hard+soft)*p.finPct;
+    land = p.land;
+  }
+  const cost = land + hard + soft + fin;
+  /* The build cost per m² that the solved stack implies, for the detail panel:
+     it is a result here, not an input. */
+  const costM2 = hard / (sellableM2 * 1.32);
+  const profit = gdv - cost, margin = profit/gdv, roi = profit/cost;
+  const velocity = sold.length/Math.max(1,p.age);
+  const remaining = n - sold.length - resv.length;
+  const monthsOut = remaining/Math.max(.35, velocity);
+  const beUnits = Math.ceil(cost/(gdv/n));
+  const lifeMonths = Math.max(12, p.age + monthsOut + 8);
+  const irr = Math.pow(1+roi, 12/lifeMonths)-1;
+  const profitPerMonth = profit/lifeMonths;
+  return {n, sellableM2, gdv, contracted, cost, hard, soft, fin, land, costM2, profit, margin, roi, irr,
+          velocity, remaining, monthsOut, lifeMonths, profitPerMonth, beUnits,
+          sold:sold.length, resv:resv.length, absorbed:(sold.length+resv.length)/n, avgPpm2:gdv/sellableM2};
+}
+const gCache = new Map();
+const G = p => { if(!gCache.has(p.id)) gCache.set(p.id, feas(p)); return gCache.get(p.id); };
+
+/* --------------------------------------------------------------------------
+   Referencias de zona.
+
+   Un mapa de cartera contesta «cómo va este edificio». La pregunta que le sigue
+   siempre es «y cómo va la zona», y hasta ahora no la contestaba nadie: había
+   que salir a la lista de proyectos y filtrar a mano por distrito.
+
+   Todo lo que sale aquí está calculado, no inventado. Dos fuentes distintas y
+   conviene no confundirlas:
+
+     · La CARTERA — las promociones propias que caen en el distrito. De ahí
+       salen las etapas, la absorción, el inventario y el precio medio real.
+     · El CONTEXTO — las huellas de OpenStreetMap del mismo distrito, que son
+       edificios reales sin modelo financiero detrás. De ahí sale el perfil de
+       stock construido: cuántos hay y de qué altura.
+
+   La comparación de precio es entre iguales: el proyecto abierto contra el
+   precio medio de las promociones propias del mismo distrito. `DISTRICT_BASE`
+   no sirve para esto aunque lo parezca — es la base con la que el modelo tasa
+   un edificio de contexto al pincharlo, y para la cartera queda anulada por la
+   calibración que ajusta el precio por m² a los ingresos reales de cada
+   promoción. Contrastar una cosa contra la otra daba primas de hasta −53 % que
+   no son un hallazgo: son el residuo de nuestra propia calibración.
+   -------------------------------------------------------------------------- */
+const zonaCache = new Map();
+
+function zona(distrito){
+  if(zonaCache.has(distrito)) return zonaCache.get(distrito);
+
+  const propias = DATA.filter(p => p.district === distrito && !p.estimated);
+
+  /* Etapas, en el orden en que avanza una promoción. */
+  const ORDEN_ETAPA = ['Factibilidad','Diseño','Permisos','En obra','Preventa','Entregado'];
+  const etapas = ORDEN_ETAPA
+    .map(e => ({ e, n: propias.filter(p => p.etapa === e).length }))
+    .filter(x => x.n > 0);
+
+  let uds = 0, vendidas = 0, reservadas = 0, gdv = 0, m2 = 0, coste = 0;
+  for(const p of propias){
+    const g = G(p);
+    uds += g.n; vendidas += g.sold; reservadas += g.resv;
+    gdv += g.gdv; m2 += g.sellableM2; coste += g.cost;
+  }
+  const ppm2 = m2 ? gdv / m2 : 0;
+
+  /* Stock construido: las huellas reales del distrito que no son cartera. */
+  const usadas = new Set(propias.map(p => p.name));
+  const stock = OSM.filter(o => o[1] === distrito && !usadas.has(o[0]));
+  const plantas = stock.map(o => o[2]);
+
+  const z = {
+    distrito,
+    promociones: propias.length,
+    etapas,
+    uds, vendidas, reservadas,
+    disponibles: uds - vendidas - reservadas,
+    absorcion: uds ? (vendidas + reservadas) / uds : 0,
+    gdv,
+    margen: gdv ? (gdv - coste) / gdv : 0,
+    ppm2,
+    stock: stock.length,
+    plantasMedia: plantas.length ? plantas.reduce((a,b)=>a+b,0) / plantas.length : 0,
+    plantasMax: plantas.length ? Math.max(...plantas) : 0,
+  };
+  zonaCache.set(distrito, z);
+  return z;
+}
+
+/** Puesto de una promoción dentro de su distrito, por la lente activa. */
+function puestoEnZona(p){
+  const L = lens();
+  const pares = DATA.filter(x => x.district === p.district && !x.estimated)
+    .map(x => ({ id: x.id, v: L.get(G(x)) }))
+    .sort((a,b) => b.v - a.v);
+  return { puesto: pares.findIndex(x => x.id === p.id) + 1, de: pares.length };
+}
+
+/* ---------- formatting ---------- */
+const M  = v => { const a = Math.abs(v), s = v<0?'-':'';
+  return a>=1e9 ? s+'$'+(a/1e9).toFixed(2)+'B' : s+'$'+(a/1e6).toFixed(a>=1e7?1:2)+'M'; };
+const K  = v => (v<0?'-':'')+'$'+Math.round(Math.abs(v)/1e3)+'k';
+const $  = v => '$'+Math.round(v).toLocaleString('en-US');
+const pc = v => (v*100).toFixed(1)+'%';
+
+/* ============================================================
+   Money lenses — the "which building makes the best money" model
+   ============================================================ */
+const LENSES = {
+  roi:    {label:'ROI sobre coste',   short:'ROI',      fmt:pc, get:g=>g.roi,
+           why:'Utilidad ÷ costo total. Lo que devuelve cada dólar realmente puesto — la lente correcta cuando lo que escasea es el capital y no el suelo.'},
+  irr:    {label:'TIR anualizada',    short:'TIR',      fmt:pc, get:g=>g.irr,
+           why:'El ROI repartido sobre el plazo real de venta. Un 40 % en dos años gana a un 55 % en seis: ésta es la lente que le pone precio al tiempo.'},
+  ppm:    {label:'Utilidad por mes',  short:'$/mes',    fmt:K,  get:g=>g.profitPerMonth,
+           why:'Utilidad ÷ meses del lanzamiento al cierre de ventas. La velocidad a la que el capital vuelve para el siguiente solar — la lente del operador.'},
+  profit: {label:'Utilidad total',    short:'Utilidad', fmt:M,  get:g=>g.profit,
+           why:'El tamaño absoluto del premio, sin mirar cuánto capital ni cuánto tiempo costó. Aquí ganan siempre las torres grandes.'},
+  margin: {label:'Margen sobre ingresos', short:'Margen', fmt:pc, get:g=>g.margin,
+           why:'Utilidad ÷ ingresos por venta. El colchón: cuánto pueden caer los precios antes de que la operación deje de sostenerse.'},
+};
+let lensKey = 'roi';
+const lens = () => LENSES[lensKey];
+
+/* --------------------------------------------------------------------------
+   Los dos modos del visor.
+
+   `cartera` — sólo se pueden pinchar las promociones propias. Los edificios de
+   la ciudad quedan de contexto y nada más: ni cursor de mano, ni estimación al
+   pulsarlos. Es el modo de trabajo, el de «cómo van mis dieciocho».
+
+   `estudio` — el visor se convierte en un estudio de zona. El panel de la
+   izquierda deja de ordenar promociones y pasa a ordenar distritos, con lo que
+   se le pregunta a un mercado: cuánta obra hay, a qué precio se está vendiendo,
+   qué absorción lleva y cuánto stock construido tiene alrededor. Y ahí sí se
+   puede pinchar cualquier edificio de la ciudad, porque en este modo un
+   edificio ajeno es un comparable: al pulsarlo se le monta una factibilidad
+   con la base de precio de su distrito.
+
+   El mismo mapa contesta dos preguntas distintas y no conviene mezclarlas: en
+   el modo de trabajo, un clic accidental en una torre ajena sacaba una ficha
+   con cifras inventadas al lado de las reales.
+   -------------------------------------------------------------------------- */
+let modo = 'cartera';
+
+/* score every building 0..1 on the active lens, for the colour ramp */
+let scored = [], vMin = 0, vMax = 1;
+function rescore(){
+  const L = lens();
+  scored = DATA.map(p => ({p, v:L.get(G(p))})).sort((a,b)=>b.v-a.v);
+  vMin = Math.min(...scored.map(s=>s.v));
+  vMax = Math.max(...scored.map(s=>s.v));
+  scored.forEach(s => s.score = vMax===vMin ? 1 : (s.v-vMin)/(vMax-vMin));
+  scored.forEach((s,i) => s.rank = i+1);
+}
+const scoreOf = id => scored.find(s=>s.p.id===id);
+
+/* ---------- ramp: one hue, monotone lightness, validated ---------- */
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const ramp = () => ['--m1','--m2','--m3','--m4','--m5'].map(css);
+const rampColor = t => ramp()[Math.min(4, Math.max(0, Math.round(t*4)))];
+const isDark = () => document.documentElement.dataset.theme === 'dark';
+
+/* ============================================================
+   Map
+   ============================================================ */
+const CENTER = [ DATA.reduce((a,p)=>a+p.lng,0)/DATA.length,
+                 DATA.reduce((a,p)=>a+p.lat,0)/DATA.length ];
+const map = new maplibregl.Map({
+  container:'map', style:'https://tiles.openfreemap.org/styles/liberty',
+  center:CENTER, zoom:13.6, pitch:40, bearing:-18, antialias:true, maxPitch:80,
+});
+/* no NavigationControl — its fixed corner collides with the rails; the bottom cluster replaces it */
+
+let mapReady = false, cur = DATA[0], popup = null;
+
+/* footprint: the building's real OSM outline, inset slightly so our extrusion
+   sits just inside the basemap's own shape instead of z-fighting its walls */
+function footprint(p){
+  const ring = p.ring, n = ring.length - 1;
+  let cx = 0, cy = 0;
+  for(let i=0;i<n;i++){ cx += ring[i][0]; cy += ring[i][1] }
+  cx /= n; cy /= n;
+  const k = 0.88;
+  return ring.map(([x,y]) => [cx + (x-cx)*k, cy + (y-cy)*k]);
+}
+function geo(){
+  const L = lens();
+  return {type:'FeatureCollection', features:DATA.map(p=>{
+    const s = scoreOf(p.id), g = G(p);
+    return {type:'Feature', id:p.id, properties:{
+      id:p.id, name:p.name, district:p.district, rank:s.rank, score:s.score,
+      value:L.fmt(s.v), height:Math.max(18, p.floors*3.2 + 2), best:s.rank===1?1:0,
+    }, geometry:{type:'Polygon', coordinates:[footprint(p)]}};
+  })};
+}
+/* Pins are HTML markers, so only the ones in view are built. The cap mattered
+   more when this drew all 240 OSM buildings; with the portfolio down to
+   eighteen it is headroom, and it still applies to estimates built by clicking
+   context buildings. `scored` is rank-sorted, so the cap keeps the
+   best-performing ones visible. */
+let pins = [], pinKey = '';
+const PIN_CAP = 70;
+function renderPins(){
+  if(!mapReady) return;
+  const b = map.getBounds();
+  const show = scored.filter(s => b.contains([s.p.lng, s.p.lat])).slice(0, PIN_CAP);
+  const key = show.map(s=>s.p.id).join(',') + '|' + lensKey + '|' + (isDark()?'d':'l') + '|' + cur.id;
+  if(key === pinKey) return;
+  pinKey = key;
+  pins.forEach(m=>m.remove()); pins = [];
+  const L = lens();
+  show.forEach(s=>{
+    const d = document.createElement('div');
+    d.className = 'pin' + (s.rank===1?' best':'') + (s.p.id===cur.id?' on':'');
+    d.innerHTML = `<i style="background:${rampColor(s.score)}"></i>`
+                + `<b>${s.rank===1?'★ ':''}${s.p.name}</b><em>${L.fmt(s.v)}</em>`;
+    d.title = `${s.p.name} · ${s.p.district} · ${L.short} ${L.fmt(s.v)} · rank ${s.rank} of ${DATA.length}`;
+    d.onclick = ev => { ev.stopPropagation(); select(s.p) };
+    pins.push(new maplibregl.Marker({element:d, anchor:'left'})
+      .setLngLat([s.p.lng, s.p.lat]).addTo(map));
+  });
+}
+const markPins = renderPins;
+
+/* colour expression: continuous magnitude -> the one-hue ramp */
+function towerColor(){
+  const c = ramp();
+  return ['interpolate',['linear'],['get','score'],
+          0,c[0], .25,c[1], .5,c[2], .75,c[3], 1,c[4]];
+}
+function contextColor(){
+  return ['interpolate',['linear'],['coalesce',['get','render_height'],10],
+          0,css('--ctx-lo'), 120,css('--ctx-hi')];
+}
+
+map.on('load', ()=>{
+  mapReady = true;
+  map.getStyle().layers.forEach(l=>{
+    if(l.type==='symbol' && l.layout?.['icon-image']){ try{ map.setPaintProperty(l.id,'icon-opacity',0) }catch{} }
+  });
+
+  /* context city — deliberately recessive, so the money ramp is the only colour that carries meaning */
+  if(map.getLayer('building-3d')){
+    map.setLayoutProperty('building-3d','visibility','visible');
+    map.setPaintProperty('building-3d','fill-extrusion-color', contextColor());
+    map.setPaintProperty('building-3d','fill-extrusion-opacity',.92);
+    map.setPaintProperty('building-3d','fill-extrusion-vertical-gradient',true);
+  }
+  if(typeof map.setLight==='function') map.setLight({anchor:'viewport',color:'#fff8e8',intensity:.55,position:[1.15,205,35]});
+
+  map.addSource('portfolio',{type:'geojson',data:geo()});
+  map.addLayer({id:'towers',type:'fill-extrusion',source:'portfolio',paint:{
+    'fill-extrusion-color':towerColor(),
+    'fill-extrusion-height':['get','height'],
+    'fill-extrusion-base':0,
+    'fill-extrusion-opacity':.97,
+    'fill-extrusion-vertical-gradient':true,
+  }});
+
+  /* La torre seleccionada.
+     Antes esta capa servía para las estimaciones de contexto, que ya no se
+     hacen. Ahora marca la promoción abierta, que era lo que faltaba: con
+     dieciocho torres del mismo color de rampa, encontrar la que está abierta en
+     el panel obligaba a leer los rótulos uno a uno.
+
+     Va en tres piezas y no en una: el volumen sólido, un halo bajo de doce
+     metros que la separa del suelo, y el borde. Un simple cambio de color no
+     bastaba — en la rampa de dinero el color ya significa otra cosa. */
+  map.addSource('picked',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+  map.addLayer({id:'picked-halo',type:'fill-extrusion',source:'picked',paint:{
+    'fill-extrusion-color':css('--m3'),
+    'fill-extrusion-height':12,
+    'fill-extrusion-base':0,
+    'fill-extrusion-opacity':.28,
+  }});
+  map.addLayer({id:'picked-hl',type:'line',source:'picked',paint:{
+    'line-color':css('--m5'),
+    'line-width':2.2,
+    'line-opacity':.9,
+  }});
+
+  /* Sólo las torres de la cartera responden al puntero. El contexto de ciudad
+     es dato de zona, no un objeto que se abre: una ficha con cifras estimadas
+     al lado de las reales confunde más de lo que informa, y en el estudio de
+     mercado esos edificios cuentan como stock construido, no como fichas. */
+  map.on('mouseenter','towers',()=>map.getCanvas().style.cursor='pointer');
+  map.on('mouseleave','towers',()=>{map.getCanvas().style.cursor=''; popup?.remove(); popup=null});
+  map.on('mousemove','towers',e=>{
+    const f = e.features?.[0]; if(!f) return;
+    popup?.remove();
+    popup = new maplibregl.Popup({closeButton:false,offset:14,className:'t'})
+      .setLngLat(e.lngLat)
+      .setHTML(`<div class="tipcard"><b>${f.properties.name}</b><span>${f.properties.district} · rank ${f.properties.rank} of ${DATA.length}</span><div class="v">${lens().short} ${f.properties.value}</div></div>`)
+      .addTo(map);
+  });
+  map.on('click','towers',e=>{ const p = byId.get(e.features?.[0]?.properties?.id); if(p) select(p,{fly:false}) });
+
+  /* dots at every zoom; names only once you're close enough that 100+ won't collide */
+  const farClass = ()=>document.body.classList.toggle('far', map.getZoom() < 15.2);
+  map.on('zoom', farClass); farClass();
+  map.on('moveend', renderPins);
+
+  refreshMap();
+  /* Selección inicial sin abrir la ficha: al cargar, el mapa manda. La ficha
+     sale al pinchar una torre o una fila. */
+  select(DATA[0], {fly:false, abrir:false});
+});
+
+function refreshMap(){
+  if(!mapReady) return;
+  map.getSource('portfolio')?.setData(geo());
+  map.setPaintProperty('towers','fill-extrusion-color', towerColor());
+  if(map.getLayer('building-3d')) map.setPaintProperty('building-3d','fill-extrusion-color', contextColor());
+  /* La marca de selección son dos capas de tipos distintos: el halo es una
+     extrusión y el borde una línea. Pedirle `fill-extrusion-color` a la línea
+     —que es lo que hacía este renglón desde que la capa cambió de tipo— hace
+     saltar a MapLibre en cada cambio de tema. */
+  if(map.getLayer('picked-halo')) map.setPaintProperty('picked-halo','fill-extrusion-color', css('--m3'));
+  if(map.getLayer('picked-hl'))   map.setPaintProperty('picked-hl','line-color', css('--m5'));
+  pinKey = '';                      // force a rebuild: colours or lens changed
+  renderPins();
+}
+
+/* ---------- clicking any OSM building builds an estimated pro-forma ---------- */
+/* real neighbourhood centres from OpenStreetMap — nearest one wins */
+const ANCHORS = {
+  'Punta Pacífica':[8.97644,-79.50794], 'Punta Paitilla':[8.97527,-79.51478],
+  'Marbella':[8.97820,-79.52228],       'Bella Vista':[8.98377,-79.52599],
+  'Obarrio':[8.98646,-79.51892],        'El Cangrejo':[8.98975,-79.52734],
+  'San Francisco':[8.99277,-79.50806],  'Coco del Mar':[8.99586,-79.49664],
+  'Costa del Este':[9.01318,-79.46807], 'La Cresta':[8.97987,-79.53159],
+  'El Carmen':[8.99560,-79.52342],      'Vista Hermosa':[9.00029,-79.52136],
+  'Santa Ana':[8.95599,-79.54067],      'El Chorrillo':[8.94984,-79.54415],
+};
+function districtAt(lat,lng){
+  let best = 'Bella Vista', bd = Infinity;
+  for(const [n,[a,b]] of Object.entries(ANCHORS)){
+    const d = ((a-lat)*111320)**2 + ((b-lng)*111320*Math.cos(lat*Math.PI/180))**2;
+    if(d < bd){ bd = d; best = n }
+  }
+  return best;
+}
+const BASE_PPM2 = Object.fromEntries(
+  Object.entries(DISTRICT_BASE).map(([k,v])=>[k, v.ppm2]));
+
+
+/* ============================================================
+   UI
+   ============================================================ */
+const el = id => document.getElementById(id);
+
+/**
+ * Abrir una promoción.
+ *
+ * Además del panel, marca la torre en el mapa: sin eso, el panel dice «Bahía
+ * Mar» y en pantalla hay dieciocho torres iguales.
+ */
+function select(p, {fly=true, abrir=true}={}){
+  cur = p;
+  /* La huella de la promoción abierta, para el halo y el borde. */
+  map.getSource('picked')?.setData({
+    type:'FeatureCollection',
+    features:[{ type:'Feature', properties:{},
+                geometry:{ type:'Polygon', coordinates:[p.ring] } }],
+  });
+  if(fly && mapReady) map.flyTo({center:[p.lng,p.lat], zoom:16.1, pitch:62, bearing:-20, duration:900});
+  renderRank(); renderDetail(); if(abrir) showRight(); markPins();
+}
+
+/* ---- left: ranking = the table-view twin of the map colour ---- */
+/**
+ * El panel del estudio de mercado.
+ *
+ * Ordena distritos, no promociones. Las columnas son las cuatro preguntas que
+ * se le hacen a una zona antes de comprar suelo en ella: cuánta obra propia
+ * hay, a cuánto se está vendiendo el metro, qué ritmo lleva y cuánto stock
+ * construido tiene alrededor.
+ *
+ * Ordenado por valor en desarrollo y no alfabéticamente: donde más hay en juego
+ * es donde primero se mira.
+ */
+function renderEstudio(){
+  el('rankTitle').textContent = 'Estudio de mercado';
+
+  const zonas = [...new Set(DATA.filter(p=>!p.estimated).map(p=>p.district))]
+    .map(zona).sort((a,b)=>b.gdv-a.gdv);
+
+  const gdvTotal = zonas.reduce((a,z)=>a+z.gdv,0);
+  const uds = zonas.reduce((a,z)=>a+z.uds,0);
+  const disp = zonas.reduce((a,z)=>a+z.disponibles,0);
+  const mejor = [...zonas].sort((a,b)=>b.ppm2-a.ppm2)[0];
+
+  el('rankBody').innerHTML = `
+    <div class="tiles">
+      <div class="tile hero">
+        <small>Zona más cara · precio medio</small>
+        <b>${mejor.distrito}</b>
+        <div class="sub">${$(mejor.ppm2)} /m² · ${mejor.promociones} en cartera</div>
+      </div>
+      <div class="tile"><small>Valor en desarrollo</small><b>${M(gdvTotal)}</b></div>
+      <div class="tile"><small>Sin vender</small><b>${disp} de ${uds}</b></div>
+    </div>
+    <table>
+      <thead><tr><th>Zona</th><th>$/m²</th><th>Absor.</th><th>Stock</th></tr></thead>
+      <tbody>
+        ${zonas.map(z=>{
+          const dentro = z.distrito === cur.district;
+          return `<tr data-zona="${z.distrito}" class="${dentro?'on':''}">
+            <td><div class="rname"><span>${z.distrito}<small>${
+              z.promociones} en cartera · ${z.disponibles} sin vender</small></span></div></td>
+            <td>${$(z.ppm2)}</td>
+            <td>${pc(z.absorcion)}</td>
+            <td>${z.stock}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    <div class="ctxnote" style="margin:12px 14px 0">
+      <i style="background:var(--m3)"></i>Precio y absorción salen de las promociones propias de
+      cada zona. «Stock» es la competencia ya edificada: huellas reales de OpenStreetMap, sin
+      modelo financiero detrás.
+    </div>`;
+
+  el('rankBody').querySelectorAll('tr[data-zona]').forEach(tr=>{
+    tr.onclick = ()=>{
+      const a = AREAS[tr.dataset.zona];
+      if(a){ el('area').value = tr.dataset.zona; map.flyTo({...a, duration:900}); }
+    };
+  });
+}
+
+/* Las tablas de la ficha son navegables: las propias abren su ficha, las
+   ajenas vuelan hasta el edificio. El enlace de búsqueda va aparte y no debe
+   disparar el vuelo, de ahí el `stopPropagation`. */
+function enlazarComparables(){
+  el('detailBody').querySelectorAll('tr[data-id]').forEach(tr=>{
+    tr.style.cursor = 'pointer';
+    tr.onclick = ()=>{ const x = byId.get(tr.dataset.id); if(x) select(x); };
+  });
+  el('detailBody').querySelectorAll('tr[data-vuela]').forEach(tr=>{
+    tr.style.cursor = 'pointer';
+    tr.onclick = ()=>{
+      const [lng, lat] = tr.dataset.vuela.split(',').map(Number);
+      map.flyTo({ center:[lng,lat], zoom:16.6, pitch:62, duration:900 });
+    };
+  });
+  el('detailBody').querySelectorAll('td.ir a').forEach(a=>{
+    a.onclick = ev => ev.stopPropagation();
+  });
+}
+
+function renderRank(){
+  if(modo === 'estudio') return renderEstudio();
+  const L = lens();
+  el('rankTitle').textContent = `Ordenado por ${L.short}`;
+  const best = scored[0], total = DATA.reduce((a,p)=>a+G(p).profit,0);
+  el('rankBody').innerHTML = `
+    <div class="tiles">
+      <div class="tile hero">
+        <small>Best money · ${L.label}</small>
+        <b>${best.p.name}</b>
+        <div class="sub">${L.fmt(best.v)} ${L.short} · ${best.p.district}</div>
+      </div>
+    </div>
+    <div class="strip">
+      <span><small>Utilidad de cartera</small><b>${M(total)}</b></span>
+      <span><small>Promociones</small><b>${DATA.length}</b></span>
+    </div>
+    <table>
+      <thead><tr><th>Edificio</th><th>${L.short}</th><th>Utilidad</th></tr></thead>
+      <tbody>
+        ${scored.map(s=>{
+          const g = G(s.p);
+          return `<tr data-id="${s.p.id}" class="${s.p.id===cur.id?'on':''}">
+            <td><div class="rname">
+              <i style="background:${rampColor(s.score)}"></i>
+              <span>${s.rank===1?'<b class="crown">★</b> ':''}${s.p.name}<small>${s.p.district}</small></span>
+            </div></td>
+            <td>${L.fmt(s.v)}</td>
+            <td>${M(g.profit)}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+  el('rankBody').querySelectorAll('tr[data-id]').forEach(tr=>{
+    tr.onclick = ()=>select(byId.get(tr.dataset.id));
+  });
+}
+
+/* ---- right: one building ---- */
+/**
+ * La competencia de la zona.
+ *
+ * Esto es lo que antes se llamaba «proyectos similares» y enseñaba las otras
+ * promociones propias del distrito. Estaba mal planteado: comparar la cartera
+ * consigo misma no dice si el solar es bueno, dice cuál de los tuyos va mejor
+ * — y eso ya lo contesta el ranking de la izquierda.
+ *
+ * La competencia son los edificios del distrito que NO son tuyos. Existen, son
+ * huellas reales de OpenStreetMap con su nombre, su altura y su planta, y se
+ * les monta una factibilidad con la base de precio de su distrito: el mismo
+ * motor que tasa la cartera, con las mismas reglas de coste, blandos y
+ * financiación.
+ *
+ * El resultado es una estimación y va rotulado como tal en la pantalla. Lo que
+ * sí es firme es el edificio: está construido, ocupa ese solar y compite por
+ * los mismos compradores. Estimar mal su margen no cambia eso.
+ */
+const compCache = new Map();
+
+/**
+ * La base observada de un distrito.
+ *
+ * No es `DISTRICT_BASE`. Ésa es la tarifa bruta con la que el modelo tasaba
+ * antes de calibrar; la cartera ya no la usa, porque su precio por m² se ajusta
+ * a los ingresos reales de cada promoción y su coste se despeja del margen
+ * publicado.
+ *
+ * Tasar la competencia con la tarifa bruta y la cartera con la calibrada no es
+ * un estudio de mercado: es una regla amañada. Con ella, las dieciocho propias
+ * salían por delante de todos sus vecinos —ROI 64 % contra 41 % en Punta
+ * Pacífica— y una comparación que siempre gana el mismo no informa de nada.
+ *
+ * Aquí la base sale de lo que la propia cartera consigue en ese distrito:
+ * precio por m² y coste de obra por m² medios de las promociones que hay allí.
+ * Así los dos lados juegan con las mismas reglas y el resultado puede ir en
+ * cualquier dirección, que es lo que se le pide a un comparable.
+ */
+const baseZonaCache = new Map();
+
+function baseZona(distrito){
+  if(baseZonaCache.has(distrito)) return baseZonaCache.get(distrito);
+  const propias = DATA.filter(x => x.district === distrito && !x.estimated && !x.ajena);
+  const bruta = DISTRICT_BASE[distrito] || DEFAULT_BASE;
+
+  let base;
+  if(!propias.length){
+    base = { ppm2: bruta.ppm2, costM2: bruta.costM2 };
+  } else {
+    const gs = propias.map(G);
+    const media = f => gs.reduce((a, g) => a + f(g), 0) / gs.length;
+    base = { ppm2: media(g => g.avgPpm2), costM2: media(g => g.costM2) };
+  }
+  baseZonaCache.set(distrito, base);
+  return base;
+}
+
+function estimarOSM(o){
+  const [name, district, floors, lat, lng, ring] = o;
+  const clave = name + '@' + district;
+  if(compCache.has(clave)) return compCache.get(clave);
+
+  /* Semilla estable a partir del nombre: la misma torre da siempre la misma
+     estimación, aunque se repinte el panel o se cambie de lente. */
+  let seed = 2166136261;
+  for(const ch of clave) seed = Math.imul(seed ^ ch.charCodeAt(0), 16777619) >>> 0;
+
+  /* Base de la zona más una dispersión de ±12 %: dos promotores en la misma
+     calle no consiguen el mismo precio ni pagan el mismo metro de obra, y sin
+     dispersión los seis rivales saldrían clavados entre sí. */
+  const b = baseZona(district);
+  const disp = k => 0.88 + ((seed >> k) % 25) / 100;
+  const p = buildProject({
+    id: 'comp-' + (seed % 1e6), name, district, lat, lng, ring, floors,
+    cols: floors >= 40 ? 4 : 3, rows: 2,
+    ppm2:   Math.round(b.ppm2   * disp(3)),
+    costM2: Math.round(b.costM2 * disp(9)),
+    /* El suelo, en la misma proporción del coste total que lleva la cartera. */
+    land:   Math.round((floors * 0.34 + 2.1) * (0.85 + (seed % 40) / 100) * 1e6),
+    softPct: +(0.11 + (seed % 7) / 100).toFixed(3),
+    finPct:  +(0.045 + (seed % 3) / 100).toFixed(3),
+    launch: '2025-06', seed, age: 4 + (seed % 18),
+    ajena: true,
+  });
+  compCache.set(clave, p);
+  return p;
+}
+
+/**
+ * Los rivales del distrito, ordenados por la lente activa.
+ *
+ * Se recortan a seis: la lista completa de El Cangrejo son cincuenta y ocho
+ * torres, y una tabla de cincuenta y ocho filas en un panel de 380 px no se
+ * lee, se cierra.
+ */
+function rivales(p, tope = 6){
+  const propias = new Set(DATA.filter(x => !x.estimated && !x.ajena).map(x => x.name));
+  /* Ordenados por precio por m², que es la columna que enseña la tabla.
+     Ordenar por la lente activa —ROI— y listar precios daba «los seis mayores»
+     de una cosa con los números de otra: el primero de la lista podía ser el
+     cuarto más caro y nada en pantalla lo explicaba. */
+  return OSM
+    .filter(o => o[1] === p.district && !propias.has(o[0]))
+    .map(estimarOSM)
+    .map(x => ({ x, v: G(x).avgPpm2 }))
+    .sort((a, b) => b.v - a.v)
+    .slice(0, tope);
+}
+
+/**
+ * El bloque de mercado: contra quién compite y quién le gana.
+ *
+ * Dos tablas, y la primera es la que importa: los edificios del distrito que no
+ * son tuyos, con su factibilidad estimada, ordenados por la lente activa y
+ * marcando cuáles están por encima de la promoción abierta. Ésa es la pregunta
+ * de un estudio de mercado — no «cuál de los míos va mejor», sino «quién lo
+ * está haciendo mejor que yo en este solar».
+ *
+ * La segunda son promociones propias de escala parecida en otras zonas. Se
+ * queda porque contesta otra cosa legítima: si el problema es la zona o es el
+ * producto.
+ */
+function mercadoHTML(p){
+  const L = lens();
+  const gp2 = G(p).avgPpm2;
+  const lista = rivales(p);
+  /* Cuántos piden más por metro que la promoción abierta. */
+  const porEncima = lista.filter(r => G(r.x).avgPpm2 > gp2).length;
+
+  const propias = DATA.filter(x => !x.estimated && !x.ajena);
+  const porTipo = propias
+    .filter(x => x.id !== p.id && x.district !== p.district)
+    .map(x => ({ x, d: Math.abs(x.floors - p.floors) / p.floors }))
+    .filter(o => o.d <= 0.35)
+    .sort((a, b) => a.d - b.d)
+    .slice(0, 4)
+    .map(o => o.x);
+
+  /* La columna es el precio de venta por m², no el ROI.
+     El ROI de un edificio ajeno es una estimación entera: sale de un coste de
+     obra, un suelo y una financiación que nadie nos ha enseñado, y presentarlo
+     a una décima —«+49,3 pp»— le da una firmeza que no tiene. El precio por m²
+     es la mitad del cálculo y la mitad que sí se comprueba: es lo que se pide
+     en la calle por ese producto en esa zona.
+
+     El enlace abre una búsqueda del edificio. No tenemos su web —son huellas de
+     OpenStreetMap, no promotoras— así que lo honesto es llevar a buscarlo, no
+     inventar una dirección. */
+  const filaRival = ({ x }) => {
+    const g = G(x);
+    const d = gp2 ? g.avgPpm2 / gp2 - 1 : 0;
+    const caro = d > 0;
+    const busca = 'https://www.google.com/search?q=' +
+      encodeURIComponent(`${x.name} ${x.district} Panamá edificio`);
+    return `<tr data-vuela="${x.lng},${x.lat}">
+      <td><div class="rname"><span>${x.name}<small>${x.floors} plantas · ${g.n} uds</small></span></div></td>
+      <td>${$(g.avgPpm2)}</td>
+      <td style="color:${caro ? 'var(--resv)' : 'var(--good)'}">${
+        caro ? '+' : '−'}${(Math.abs(d) * 100).toFixed(0)} %</td>
+      <td class="ir"><a href="${busca}" target="_blank" rel="noreferrer"
+        title="Buscar ${x.name}" aria-label="Buscar ${x.name}">↗</a></td>
+    </tr>`;
+  };
+
+  const filaPropia = x => {
+    const g = G(x), gp = G(p);
+    const d = gp.avgPpm2 ? g.avgPpm2 / gp.avgPpm2 - 1 : 0;
+    return `<tr data-id="${x.id}">
+      <td><div class="rname"><span>${x.name}<small>${x.district} · ${x.floors} plantas</small></span></div></td>
+      <td>${$(g.avgPpm2)}</td>
+      <td style="color:${d >= 0 ? 'var(--good)' : 'var(--resv)'}">${
+        d >= 0 ? '+' : '−'}${(Math.abs(d) * 100).toFixed(0)} %</td>
+    </tr>`;
+  };
+
+  return `
+    <div class="sec">
+      <h3>Competencia en ${p.district}</h3>
+      ${lista.length ? `
+        <div class="kv"><span>Edificios ajenos en el distrito</span><b>${
+          OSM.filter(o => o[1] === p.district).length - propias.filter(x => x.district === p.district).length
+        }</b></div>
+        <div class="kv"><span>Piden más por m² que ésta</span><b style="${
+          porEncima ? 'color:var(--resv)' : ''}">${porEncima} de ${lista.length}</b></div>
+        <div class="kv"><span>Esta promoción</span><b>${$(gp2)} /m²</b></div>
+        <table style="margin-top:10px">
+          <thead><tr><th>Edificio ajeno</th><th>$/m²</th><th>vs ésta</th><th></th></tr></thead>
+          <tbody>${lista.map(filaRival).join('')}</tbody>
+        </table>
+        <div class="ctxnote" style="margin-top:10px">
+          <i style="background:var(--resv)"></i>Los edificios son reales: huella, nombre y altura de
+          OpenStreetMap. El precio por m² es el que le sale al mismo motor que tasa tu cartera con la
+          base de la zona. Pincha la fila para volar hasta él, o la flecha para buscarlo.
+        </div>`
+      : `<div class="ctxnote" style="margin-top:8px"><i></i>No hay edificios ajenos registrados en
+          este distrito: la promoción no tiene competencia construida alrededor.</div>`}
+
+      ${porTipo.length ? `
+        <h3 style="margin-top:18px">Tuyas, de escala parecida</h3>
+        <table>
+          <thead><tr><th>Promoción</th><th>$/m²</th><th>vs ésta</th></tr></thead>
+          <tbody>${porTipo.map(filaPropia).join('')}</tbody>
+        </table>
+        <div class="ctxnote" style="margin-top:10px">
+          <i style="background:var(--m3)"></i>Otras zonas, misma escala. Sirve para separar el
+          problema: si aquí va peor que en las demás, es la zona; si va igual, es el producto.
+        </div>` : ''}
+    </div>`;
+}
+
+/** El bloque de zona de la ficha, en su propia función: se coloca arriba o
+ *  abajo según el modo, y una plantilla de sesenta líneas duplicada no. */
+function zonaHTML(p, g, L){
+
+      const z = zona(p.district);
+      if(!z.promociones) return '';
+      const r = puestoEnZona(p);
+      /* Este proyecto contra el precio medio de su distrito. Con una sola
+         promoción en la zona la comparación es consigo mismo, así que no se
+         enseña. */
+      const dif = z.ppm2 ? g.avgPpm2 / z.ppm2 - 1 : 0;
+      const signo = dif >= 0 ? '+' : '−';
+      return `
+    <div class="sec">
+      <h3>Zona · ${p.district}</h3>
+      <div class="kv"><span>Promociones en cartera</span><b>${z.promociones}${
+        r.de > 1 ? ` · ésta ${r.puesto}.ª de ${r.de} por ${L.short.toLowerCase()}` : ''}</b></div>
+      <div class="kv"><span>Por etapa</span><b>${z.etapas.map(x => `${x.n} ${x.e.toLowerCase()}`).join(' · ')}</b></div>
+      <div class="kv"><span>Inventario de la zona</span><b>${z.disponibles} de ${z.uds} sin vender</b></div>
+      <div class="kv"><span>Absorción de la zona</span><b>${pc(z.absorcion)}</b></div>
+      <div class="kv"><span>Precio medio de la zona</span><b>${$(z.ppm2)} /m²</b></div>
+      ${z.promociones > 1 ? `<div class="kv"><span>Esta promoción</span><b>${$(g.avgPpm2)} /m² · ${signo}${(Math.abs(dif)*100).toFixed(1)} % vs la zona</b></div>` : ''}
+      <div class="kv"><span>Valor en desarrollo</span><b>${M(z.gdv)}</b></div>
+      <div class="kv"><span>Stock construido</span><b>${z.stock} edificios${
+        z.stock ? ` · ${z.plantasMedia.toFixed(0)} plantas de media, ${z.plantasMax} el mayor` : ''}</b></div>
+      <div class="ctxnote" style="margin-top:10px">
+        <i style="background:var(--m3)"></i>Cartera y absorción salen de las promociones propias del
+        distrito. El stock construido son huellas reales de OpenStreetMap sin modelo financiero:
+        pincha una para estimarla.
+      </div>
+    </div>`
+}
+
+function renderDetail(){
+  const p = cur, g = feas(p), L = lens();
+  const s = scoreOf(p.id);
+  const floors = [];
+  for(let f=p.floors; f>=1; f--) floors.push(p.units.filter(u=>u.floor===f));
+
+  const sales = {}; p.units.forEach(u=>{ if(u.month!=null) sales[u.month] = (sales[u.month]||0)+1 });
+  const maxSale = Math.max(1, ...Object.values(sales));
+  const bars = Array.from({length:Math.max(6,p.age+1)},(_,i)=>sales[i]||0);
+
+  const remaining = p.units.filter(u=>u.status!=='sold')
+    .sort((a,b)=>b.price-a.price).slice(0,6);
+
+  /* Cada modo enseña lo suyo, y ésa es la diferencia que los hace útiles.
+     En estudio de mercado la zona y los comparables van delante y desaparecen
+     las tres secciones de operación —reparto de unidades, ventas por mes,
+     inventario disponible—, que contestan «cómo va la venta de ésta» y no «cómo
+     está el mercado aquí». Con todo junto el panel eran nueve secciones de
+     scroll y ninguna pregunta contestada del tirón. */
+  const bloqueZona = zonaHTML(p, g, L);
+
+  el('detailBody').innerHTML = `
+    ${modo === 'estudio' ? bloqueZona + mercadoHTML(p) : ''}
+    <div class="sec">
+      <div class="tiles">
+        <div class="tile hero">
+          <small>${p.estimated?'Modelo estimado':'Activo en cartera'}${s?` · puesto ${s.rank} de ${DATA.length}`:''}</small>
+          <b>${p.name}</b>
+          <div class="sub">${p.district} · ${p.floors} plantas · ${g.n} unidades</div>
+        </div>
+        <div class="tile"><small>${L.short}</small><b>${L.fmt(L.get(g))}</b></div>
+        <div class="tile"><small>Utilidad</small><b>${M(g.profit)}</b></div>
+      </div>
+      <div class="kv"><span>Ingresos por venta</span><b>${M(g.gdv)}</b></div>
+      <div class="kv"><span>Costo total</span><b>${M(g.cost)}</b></div>
+      <div class="kv"><span>Margen sobre ingresos</span><b>${pc(g.margin)}</b></div>
+      <div class="kv"><span>Contratado a la fecha</span><b>${M(g.contracted)}</b></div>
+      <div class="kv"><span>Precio medio / m²</span><b>${$(g.avgPpm2)}</b></div>
+      <div class="kv"><span>Punto de equilibrio</span><b>${g.beUnits} de ${g.n} unidades</b></div>
+      <div class="kv"><span>Cierre de ventas</span><b>quedan ${g.monthsOut.toFixed(0)} meses</b></div>
+    </div>
+
+    ${modo === 'estudio' ? '' : bloqueZona}
+
+    ${modo === 'estudio' ? '' : `
+    <div class="sec">
+      <h3>Reparto de unidades · ${pc(g.absorbed)} absorbido</h3>
+      <div class="stack">
+        ${floors.map(row=>`<div class="floor"><em>${row[0]?.floor ?? ''}</em>${
+          row.map(u=>`<i title="${u.id} · ${u.type} · ${$(u.price)} · ${u.status}"
+                        style="background:var(--${u.status==='sold'?'sold':u.status==='reserved'?'resv':'avail'})"></i>`).join('')
+        }</div>`).join('')}
+      </div>
+      <div class="keys">
+        <div><i style="background:var(--sold)"></i>Vendidas ${g.sold}</div>
+        <div><i style="background:var(--resv)"></i>Reservadas ${g.resv}</div>
+        <div><i style="background:var(--avail)"></i>Disponibles ${g.remaining}</div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>Ventas por mes desde el lanzamiento</h3>
+      <div class="bars">${bars.map(v=>`<i style="height:${Math.max(2,(v/maxSale)*100)}%"></i>`).join('')}</div>
+      <div class="axis"><span>lanzamiento</span><span>${bars.length} meses</span></div>
+    </div>
+
+    <div class="sec">
+      <h3>Inventario disponible destacado</h3>
+      <table>
+        <thead><tr><th>Unidad</th><th>Tipo</th><th>Precio</th><th>Estado</th></tr></thead>
+        <tbody>${remaining.map(u=>`<tr><td>${u.id}</td><td>${u.type}</td><td>${$(u.price)}</td>
+          <td>${u.status==='reserved'?'Reserv.':'Disp.'}</td></tr>`).join('')}</tbody>
+      </table>
+    </div>`}`;
+
+  enlazarComparables();
+}
+
+/* ---- legend ---- */
+let legendOpen = false;
+function renderLegend(){
+  const L = lens(), c = ramp();
+  const lg = el('legend');
+  lg.classList.toggle('open', legendOpen);
+  lg.innerHTML = `
+    <div class="lhead">
+      <h3>${L.label}</h3>
+      <button class="lmore" id="legendMore">${legendOpen ? 'Menos ▴' : '¿Cómo leerlo? ▾'}</button>
+    </div>
+    <div class="ramp">${c.map(x=>`<i style="background:${x}"></i>`).join('')}</div>
+    <div class="rampax"><span>${L.fmt(vMin)}</span><span>${L.fmt(vMax)}</span></div>
+    <div class="more">
+      <p>${L.why}</p>
+      <div class="ctxnote"><i></i>Los edificios grises son el stock construido de la zona. No llevan modelo financiero: cuentan como competencia edificada, no como fichas.</div>
+    </div>`;
+  el('legendMore').onclick = ()=>{ legendOpen = !legendOpen; renderLegend(); };
+}
+
+/* ---- search ---- */
+const q = el('q'), qRes = el('qRes');
+let matches = [], activeIdx = -1;
+
+function search(term){
+  const t = term.trim().toLowerCase();
+  if(!t){ matches = []; qRes.classList.remove('open'); el('qClear').style.display='none'; return }
+  el('qClear').style.display='block';
+  const L = lens();
+  matches = scored
+    .filter(s => s.p.name.toLowerCase().includes(t) || s.p.district.toLowerCase().includes(t))
+    .slice(0,8)
+    .map(s => ({kind:'project', s}));
+
+  /* also search the city buildings currently drawn on screen */
+  if(mapReady && map.getLayer('building-3d')){
+    const seen = new Set();
+    const ctx = map.queryRenderedFeatures({layers:['building-3d']})
+      .filter(f=>{
+        const n = f.properties?.name || f.properties?.['name:en'];
+        if(!n || !n.toLowerCase().includes(t) || seen.has(n)) return false;
+        seen.add(n); return true;
+      }).slice(0,5);
+    ctx.forEach(f=>matches.push({kind:'context', f}));
+  }
+
+  activeIdx = matches.length ? 0 : -1;
+  qRes.innerHTML = matches.length ? renderMatches(L) : `<div class="empty">No building matches “${term}”.</div>`;
+  qRes.classList.add('open');
+  qRes.querySelectorAll('li').forEach((li,i)=>{
+    li.onmouseenter = ()=>{ activeIdx=i; markActive() };
+    li.onclick = ()=>choose(i);
+  });
+}
+function renderMatches(L){
+  const proj = matches.filter(m=>m.kind==='project'), ctx = matches.filter(m=>m.kind==='context');
+  let html = '';
+  if(proj.length){
+    html += `<div class="grouphead">Cartera</div><ul>` + proj.map((m,i)=>{
+      const idx = matches.indexOf(m);
+      return `<li data-i="${idx}" class="${idx===activeIdx?'active':''}">
+        <i class="sw" style="background:${rampColor(m.s.score)}"></i>
+        <div><b>${m.s.p.name}</b><small>${m.s.p.district} · rank ${m.s.rank}</small></div>
+        <span class="val">${L.fmt(m.s.v)}</span></li>`;
+    }).join('') + `</ul>`;
+  }
+  if(ctx.length){
+    html += `<div class="grouphead">En el mapa</div><ul>` + ctx.map(m=>{
+      const idx = matches.indexOf(m);
+      const n = m.f.properties?.name || m.f.properties?.['name:en'];
+      return `<li data-i="${idx}" class="${idx===activeIdx?'active':''}">
+        <i class="sw" style="background:var(--ctx-hi)"></i>
+        <div><b>${n}</b><small>Stock construido de la zona</small></div></li>`;
+    }).join('') + `</ul>`;
+  }
+  return html;
+}
+function markActive(){
+  qRes.querySelectorAll('li').forEach(li=>li.classList.toggle('active', +li.dataset.i===activeIdx));
+}
+function centroid(geom){
+  const ring = geom.type==='Polygon' ? geom.coordinates[0] : geom.coordinates[0][0];
+  let x=0,y=0; ring.forEach(([a,b])=>{x+=a;y+=b});
+  return {lng:x/ring.length, lat:y/ring.length};
+}
+function choose(i){
+  const m = matches[i]; if(!m) return;
+  closeSearch();
+  if(m.kind==='project'){ select(m.s.p) }
+  else {
+    /* Un edificio de contexto se puede buscar y volar hasta él —es útil para
+       situarse— pero ya no se abre en ficha: no tiene modelo detrás. */
+    const c = centroid(m.f.geometry);
+    map.flyTo({center:[c.lng,c.lat], zoom:16.4, pitch:62, duration:900});
+    toast('Stock construido · sin modelo financiero detrás');
+  }
+}
+function closeSearch(){ qRes.classList.remove('open'); q.blur() }
+
+q.addEventListener('input', e=>search(e.target.value));
+q.addEventListener('focus', ()=>{ if(q.value.trim()) search(q.value) });
+q.addEventListener('keydown', e=>{
+  if(e.key==='ArrowDown'){ e.preventDefault(); activeIdx=Math.min(matches.length-1,activeIdx+1); markActive() }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); activeIdx=Math.max(0,activeIdx-1); markActive() }
+  else if(e.key==='Enter'){ e.preventDefault(); choose(activeIdx) }
+  else if(e.key==='Escape'){ closeSearch() }
+});
+el('qClear').onclick = ()=>{ q.value=''; search(''); q.focus() };
+document.addEventListener('click', e=>{ if(!e.target.closest('.search')) qRes.classList.remove('open') });
+document.addEventListener('keydown', e=>{
+  if((e.metaKey||e.ctrlKey) && e.key==='k'){ e.preventDefault(); q.focus(); q.select() }
+});
+
+/* ---- toast ---- */
+let toastT;
+function toast(msg){
+  const t = el('toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('on'), 2400);
+}
+
+/* ---- lens picker ---- */
+el('lens').innerHTML = Object.entries(LENSES).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
+el('lens').value = lensKey;
+el('lens').onchange = e=>{
+  lensKey = e.target.value;
+  rescore(); refreshMap(); renderRank(); renderDetail(); renderLegend();
+  toast(`Coloured by ${lens().label} — ${scored[0].p.name} leads at ${lens().fmt(scored[0].v)}`);
+};
+
+/* ---- areas ---- */
+/* areas are derived from where the buildings actually are — no hand-typed centres */
+const AREAS = {overview:{center:CENTER, zoom:13.6, pitch:40, label:'Toda la ciudad'}};
+[...new Set(DATA.map(p=>p.district))].sort((a,b)=>a.localeCompare(b,'es')).forEach(d=>{
+  const ps = DATA.filter(p=>p.district===d);
+  const lng = ps.reduce((a,p)=>a+p.lng,0)/ps.length, lat = ps.reduce((a,p)=>a+p.lat,0)/ps.length;
+  const spread = Math.max(...ps.map(p=>Math.hypot((p.lat-lat)*111320,(p.lng-lng)*110000)), 120);
+  AREAS[d] = {center:[lng,lat], zoom: Math.max(14.2, Math.min(16.4, 16.6 - Math.log2(spread/120))),
+              label:`${d} · ${ps.length}`};
+});
+el('area').innerHTML = Object.entries(AREAS)
+  .map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
+el('area').onchange = e=>{
+  const a = AREAS[e.target.value];
+  map.flyTo({center:a.center, zoom:a.zoom, pitch:a.pitch ?? 60, bearing:-18, duration:950});
+};
+/* El conmutador. Cambiar de modo no mueve el mapa ni pierde la selección: sólo
+   cambia qué se puede pulsar y qué se enseña a la izquierda. */
+function ponerModo(m){
+  if(modo === m) return;
+  modo = m;
+  el('modoCartera').classList.toggle('on', m === 'cartera');
+  el('modoEstudio').classList.toggle('on', m === 'estudio');
+  document.body.classList.toggle('estudio', m === 'estudio');
+  map.getCanvas().style.cursor = '';
+  renderRank(); renderDetail();
+  toast(m === 'estudio'
+    ? 'Estudio de mercado · pincha cualquier edificio para estimarlo'
+    : 'Cartera · sólo se pueden pulsar tus promociones');
+}
+el('modoCartera').onclick = ()=>ponerModo('cartera');
+el('modoEstudio').onclick = ()=>ponerModo('estudio');
+
+el('fitAll').onclick = ()=>{ el('area').value='overview'; map.flyTo({...AREAS.overview, bearing:-18, duration:950}) };
+el('tilt').onclick = e=>{
+  const to2D = map.getPitch() > 20;
+  map.easeTo({pitch:to2D?0:60, bearing:to2D?0:-20, duration:700});
+  e.currentTarget.textContent = to2D ? '3D view' : '2D view';
+};
+el('zoomIn').onclick  = ()=>map.zoomIn({duration:300});
+el('zoomOut').onclick = ()=>map.zoomOut({duration:300});
+el('north').onclick   = ()=>map.easeTo({bearing:0, duration:500});
+
+/* ---- panels ---- */
+function showRight(){ el('rightPanel').classList.remove('hidden'); el('showRight').classList.remove('on') }
+el('closeLeft').onclick  = ()=>{ el('leftPanel').classList.add('hidden'); el('showLeft').classList.add('on') };
+el('showLeft').onclick   = ()=>{ el('leftPanel').classList.remove('hidden'); el('showLeft').classList.remove('on') };
+el('closeRight').onclick = ()=>{ el('rightPanel').classList.add('hidden'); el('showRight').classList.add('on') };
+el('showRight').onclick  = showRight;
+
+/* ---- theme ---- */
+const saved = localStorage.getItem('ed-theme');
+document.documentElement.dataset.theme = saved || 'light';
+function syncTheme(){ el('theme').textContent = isDark() ? 'Light' : 'Dark' }
+el('theme').onclick = ()=>{
+  document.documentElement.dataset.theme = isDark() ? 'light' : 'dark';
+  localStorage.setItem('ed-theme', document.documentElement.dataset.theme);
+  syncTheme(); refreshMap(); renderRank(); renderDetail(); renderLegend();
+};
+syncTheme();
+
+/* ---- boot ---- */
+rescore();
+renderRank();
+renderDetail();
+renderLegend();
+/* La ficha arranca cerrada: con las dos columnas abiertas de salida, el mapa
+   quedaba enterrado. Se abre sola al elegir un edificio (select → showRight). */
+el('rightPanel').classList.add('hidden');
+el('showRight').classList.add('on');
+</script>
+</body>
+</html>
