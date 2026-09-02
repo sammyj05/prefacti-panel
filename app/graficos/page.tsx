@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { BarChart3 } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -9,6 +9,8 @@ import { UMBRALES } from "@/lib/equipo";
 import { moneyC, money, pct, num } from "@/lib/format";
 import { Pagina } from "@/components/Pagina";
 import { Marbete, Pestanas } from "@/components/ui";
+import { Analizador } from "@/components/graficos/Analizador";
+import { proyectosAnalizables } from "@/lib/analizadorCartera";
 
 /**
  * Gráficos.
@@ -34,6 +36,10 @@ const METRICAS = {
 export default function Graficos() {
   const [m, setM] = useState<keyof typeof METRICAS>("utilidad");
   const cfg = METRICAS[m];
+
+  /* La cartera con su resultado del motor y el retorno aplanado, para el
+     analizador dinámico. Una sola pasada por render de la página. */
+  const analizables = useMemo(() => proyectosAnalizables(EDIFICIOS), []);
 
   const datos = [...EDIFICIOS].sort((a, b) => cfg.get(b) - cfg.get(a));
   const max = Math.max(...datos.map(cfg.get)) || 1;
@@ -120,6 +126,12 @@ export default function Graficos() {
           })}
         </div>
       </section>
+
+      {/* El analizador dinámico: cualquier métrica del catálogo del motor,
+          agrupada y filtrada, con gráficas que se fijan. */}
+      <div className="mt-5">
+        <Analizador proyectos={analizables} />
+      </div>
 
       <div className="mt-5 grid gap-5 lg:grid-cols-2">
         <section className="seccion overflow-hidden rounded-caja">

@@ -37,6 +37,9 @@ export type EtapaObra = {
  * tipo— los modelos de vivienda o las etapas de obra.
  */
 export type Detalle = {
+  /** El estudio crudo, tal como lo guarda el producto: es lo que consumen las
+      herramientas interactivas de la ficha para calcular con el motor real. */
+  datos: Record<string, unknown> | null;
   params: Record<string, number> | null;
   inputs: Record<string, string | number> | null;
   chequeos: { pais?: string; target?: string } | null;

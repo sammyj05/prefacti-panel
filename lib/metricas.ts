@@ -3,6 +3,40 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Edificio } from "./data";
 import { money, moneyC, num, pct, m2 } from "./format";
+import { calcularFactibilidad, metricasComercial } from "./motor/calculations.js";
+import { datosOriginales, tipoMotor } from "./estudioLocal";
+
+/**
+ * El resultado del motor por promoción, calculado una vez y recordado.
+ *
+ * Las métricas nuevas de la tarjeta —precio neto, costo por m² vendible, la
+ * hipótesis comercial— no viven en la cabecera del dato: salen del estudio,
+ * calculado con el motor real. Un `WeakMap` sobre la promoción evita repetir
+ * la corrida en cada tarjeta de la cartera.
+ */
+type ResMotor = Record<string, number>;
+const cacheResultado = new WeakMap<Edificio, ResMotor>();
+const cacheComercial = new WeakMap<Edificio, ResMotor>();
+
+function resultadoDe(e: Edificio): ResMotor {
+  const visto = cacheResultado.get(e);
+  if (visto) return visto;
+  const datos = datosOriginales(e);
+  const r = (datos ? calcularFactibilidad(datos, tipoMotor(e)) : {}) as ResMotor;
+  cacheResultado.set(e, r);
+  return r;
+}
+
+function comercialDe(e: Edificio): ResMotor {
+  const visto = cacheComercial.get(e);
+  if (visto) return visto;
+  const datos = datosOriginales(e);
+  const c = (datos
+    ? metricasComercial(resultadoDe(e), datos, tipoMotor(e))
+    : {}) as ResMotor;
+  cacheComercial.set(e, c);
+  return c;
+}
 
 /**
  * Las métricas que puede llevar una ficha de la cartera.
@@ -24,7 +58,9 @@ import { money, moneyC, num, pct, m2 } from "./format";
 
 export type ClaveMetrica =
   | "ventas" | "costo" | "utilidad" | "roi" | "tir" | "van"
-  | "exposicion" | "unidades" | "gba" | "gla" | "precioM2" | "eficiencia";
+  | "exposicion" | "unidades" | "gba" | "gla" | "precioM2" | "eficiencia"
+  | "precioNetoM2" | "ctVendible" | "vendido" | "porVender" | "pctVendido"
+  | "m2Vendidos" | "unidadesVendidas" | "unidadesPorVender" | "ritmoActual" | "absorcion";
 
 export type Metrica = {
   k: ClaveMetrica;
@@ -61,6 +97,28 @@ export const METRICAS: Metrica[] = [
     fmt: e => money(e.ventas / e.gla) },
   { k: "eficiencia", t: "Eficiencia",      corto: "Eficiencia", d: "Vendible sobre construido: cuánto no se pierde.",
     fmt: e => pct(e.gla / e.gba) },
+  /* --- Del estudio: precios finos e hipótesis comercial. Salen del motor,
+         vía `comercialDe`, no de la cabecera. --- */
+  { k: "precioNetoM2", t: "Precio neto / m²", corto: "Neto/m²", d: "Precio de lista menos el descuento comercial.",
+    fmt: e => money(resultadoDe(e).precioNetoM2 ?? 0) },
+  { k: "ctVendible", t: "Costo / m² vendible", corto: "Costo/m²", d: "Costo total entre los metros que se venden.",
+    fmt: e => money(resultadoDe(e).ctVendible ?? 0) },
+  { k: "vendido",    t: "Vendido",         corto: "Vendido",   d: "Monto ya comprometido en la hipótesis comercial.",
+    fmt: e => moneyC(comercialDe(e).totalVendido ?? 0) },
+  { k: "porVender",  t: "Por vender",      corto: "Por vender", d: "Lo que falta por colocar a precio de hoy.",
+    fmt: e => moneyC(comercialDe(e).totalPorVender ?? 0) },
+  { k: "pctVendido", t: "% vendido",       corto: "% vendido", d: "Metros vendidos sobre los metros de venta.",
+    fmt: e => pct(comercialDe(e).pctVendido ?? 0) },
+  { k: "m2Vendidos", t: "m² vendidos",     corto: "m² vend.",  d: "Superficie ya comprometida.",
+    fmt: e => m2(comercialDe(e).m2Vendidos ?? 0) },
+  { k: "unidadesVendidas", t: "Unidades vendidas", corto: "Uds. vend.", d: "Cuántas ya tienen comprador.",
+    fmt: e => num(comercialDe(e).unidadesVendidas ?? 0) },
+  { k: "unidadesPorVender", t: "Unidades por vender", corto: "Uds. rest.", d: "Las que faltan por colocar.",
+    fmt: e => num(comercialDe(e).unidadesPorVender ?? 0) },
+  { k: "ritmoActual", t: "Ritmo actual",   corto: "Ritmo",     d: "Unidades al mes desde el inicio de preventa.",
+    fmt: e => (comercialDe(e).ritmoActual ?? 0).toFixed(1) + " un/mes" },
+  { k: "absorcion",  t: "Absorción",       corto: "Absorción", d: "Años hasta agotar el inventario al ritmo objetivo.",
+    fmt: e => ((comercialDe(e).absorcion ?? 0) || 0).toFixed(1) + " años" },
 ];
 
 export const POR_DEFECTO: ClaveMetrica[] = ["ventas", "utilidad", "unidades"];

@@ -10,6 +10,7 @@ import { responsableDe, fechaDe, hace, UMBRALES } from "@/lib/equipo";
 import { money, moneyC, num, pct, m2 } from "@/lib/format";
 import { Pagina, Avatar } from "@/components/Pagina";
 import { DetalleProyecto } from "@/components/DetalleProyecto";
+import { Estudio } from "@/components/estudio/Estudio";
 import { Boton, Esqueleto, Marbete } from "@/components/ui";
 
 const Massing3D = dynamic(() => import("@/components/Massing3D").then(m => m.Massing3D), {
@@ -166,10 +167,15 @@ export function DetalleDemo({ id, edificio }: { id?: string; edificio?: Edificio
         ))}
       </div>
 
+      {/* El estudio completo, editable: Master, presupuesto y flujo de caja
+          sobre el mismo árbol de datos del producto, calculado con el motor
+          real. Los cambios viven como borrador local. */}
+      <Estudio e={e} />
+
       {/* Todo lo que la promoción tiene dentro: presupuesto, unidades,
-          programa y caja. Va justo debajo de los indicadores porque es lo que
-          los explica — hasta ahora el margen se enseñaba sin decir de qué
-          partidas salía. */}
+          programa y caja tal como quedaron guardados. Va justo debajo porque
+          es lo que explica los indicadores — el margen sin sus partidas es
+          sólo un número. */}
       <DetalleProyecto e={e} />
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">

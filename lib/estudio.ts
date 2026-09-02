@@ -160,6 +160,7 @@ export function edificioDesdeDatos(
     colorHex: "#1056c8",
     massing: (d.massing ?? []) as never,
     detalle: {
+      datos: (datos ?? null) as never,
       params: (d.params ?? null) as never,
       inputs: (d.inputs ?? null) as never,
       chequeos: (d.chequeos ?? null) as never,

@@ -278,6 +278,11 @@ for (const cfg of PROYECTOS) {
 
     /* Todo lo que la aplicación de verdad tiene dentro del proyecto. */
     detalle: {
+      /* El estudio crudo, tal como lo guarda el producto. Es lo que consumen
+         las herramientas interactivas de la ficha —Master, presupuesto, flujo,
+         simulador— para calcular con el motor de verdad sobre el mismo dato,
+         sin pasar por el aplanado de solo-lectura de abajo. */
+      datos,
       params: datos.params ?? null,
       inputs: datos.inputs ?? null,
       chequeos: datos.chequeos ?? null,
